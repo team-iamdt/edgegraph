@@ -98,7 +98,7 @@ async def insert_movie(title: str, year: int, actors: list[str]):
 
     logger.debug(query)
 
-    await edgegraph_query.execute(query)
+    await edgegraph.execute(query)
 ```
 
 ## 개발 방식
