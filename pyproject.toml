@@ -1,0 +1,46 @@
+[tool.poetry]
+name = "edgegraph"
+version = "0.0.1"
+description = "Python EdgeDB Library with Schema Validation, Deserializing, Query Builder"
+authors = ["Haze Lee <hazelee@realignist.me>"]
+license = "Apache 2.0"
+
+[tool.black]
+line-length = 88
+skip_string_normalization = false
+
+[tool.zimports]
+black-line-length = 88
+keep-unused-type-checking = false
+multi-imports = true
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.0.1"
+tag_format = "v$version"
+version_files = [
+    "pyproject.toml:version"
+]
+bump_message = "bump: $current_version → $new_version [skip-ci]"
+
+[tool.poetry.dependencies]
+python = ">=3.7,<4.0"
+pendulum = "^2.1.2"
+edgedb = "^0.24.0"
+pydantic = "^1.9.2"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.1.2"
+pytest-asyncio = "^0.19.0"
+pre-commit = "^2.20.0"
+zimports = "^0.6.0"
+black = "^22.6.0"
+mypy = "^0.971"
+flake8 = "^5.0.4"
+yesqa = "^1.4.0"
+cibuildwheel = "^2.9.0"
+commitizen = "^2.29.5"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
