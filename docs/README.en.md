@@ -112,7 +112,7 @@ async def insert_movie(title: str, year: int, actors: list[str]):
 
 ### Implement TODO List
 
- - [ ] Validate Defined `EdgeModel` and `EdgeDB Schema`.
+ - [x] Validate Defined `EdgeModel` and `EdgeDB Schema`.
  - [ ] Initial Implementation of Query Builder
  - [ ] Implement Deserializer of EdgeQL Result
  - [ ] Improve Each Features (especially Query Builder)
