@@ -89,6 +89,8 @@ class SchemaValidator:
         client: e.AsyncIOClient,
     ) -> t.List[ValidatedErrorValue]:
         outline_error_message = "Validation Failure in Outline Inspection."
+
+        # TODO(Hazealign): Migrate to Query Builder when Query Builder implemented
         result: e.Set = await client.query(
             """
                 with module schema select ObjectType {
@@ -278,6 +280,7 @@ class SchemaValidator:
 
         type_name = f"{module}::{name}"
 
+        # TODO(Hazealign): Migrate to Query Builder when Query Builder implemented
         result: e.Object = await client.query_single(
             """
                 with module schema select ObjectType {
