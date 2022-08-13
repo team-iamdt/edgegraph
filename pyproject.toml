@@ -40,6 +40,7 @@ flake8 = "^5.0.4"
 yesqa = "^1.4.0"
 cibuildwheel = "^2.9.0"
 commitizen = "^2.29.5"
+pytest-coverage = "^0.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

@@ -1,0 +1,187 @@
+name: 'Integration for Pull Request'
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check-conventions:
+    name: Check Coding Conventions
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Setup Python 3.10
+        if: ${{ !env.ACT }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.10"
+
+      - name: Setup Python 3.10 (For Act)
+        if: ${{ env.ACT }}
+        run: |
+          # Install Python
+          sudo add-apt-repository -y ppa:deadsnakes/ppa
+          sudo apt-get update
+          sudo apt-get install -y python3.10-dev python3.10-venv
+
+          # Update Main Python
+          sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.10 1
+          sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
+          sudo update-alternatives --install /usr/local/bin/python python /usr/bin/python3.10 1
+          sudo update-alternatives --install /usr/local/bin/python3 python3 /usr/bin/python3.10 1
+          sudo update-alternatives --config python
+          sudo update-alternatives --config python3
+
+          # Install PIP and Virtualenv
+          curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+          python get-pip.py
+          rm -rf get-pip.py
+          pip install virtualenv
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Load cached venv
+        id: cache
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/ci.yml') }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install Dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --upgrade pip setuptools wheel
+          poetry install
+
+      - name: Fix PATH Environment Variable
+        run: |
+          echo "$(pwd)/.venv/bin" >> $GITHUB_PATH
+
+      - name: Check Conventions
+        run: pre-commit run --all-files
+
+  tests:
+    name: Test EdgeGraph
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: [ "3.7", "3.8", "3.9", "3.10" ]
+
+    services:
+      edgedb:
+        image: edgedb/edgedb
+        env:
+          EDGEDB_SERVER_USER: test
+          EDGEDB_SERVER_PASSWORD: test
+          EDGEDB_SERVER_TLS_CERT_MODE: generate_self_signed
+        ports:
+          - 5656:5656
+        volumes:
+          - ./edgedb/dbschema:/dbschema
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+
+      - name: Setup Python ${{ matrix.python-version }}
+        if: ${{ !env.ACT }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Setup Python ${{ matrix.python-version }} & EdgeDB (For Act)
+        if: ${{ env.ACT }}
+        env:
+          PYTHON_VERSION: python${{ matrix.python-version }}
+        run: |
+          # Install Python
+          sudo add-apt-repository -y ppa:deadsnakes/ppa
+          sudo apt-get update
+          sudo apt-get install -y ${PYTHON_VERSION}-dev ${PYTHON_VERSION}-venv
+
+          # Update Main Python
+          sudo update-alternatives --install /usr/bin/python python /usr/bin/${PYTHON_VERSION} 1
+          sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/${PYTHON_VERSION} 1
+          sudo update-alternatives --install /usr/local/bin/python python /usr/bin/${PYTHON_VERSION} 1
+          sudo update-alternatives --install /usr/local/bin/python3 python3 /usr/bin/${PYTHON_VERSION} 1
+          sudo update-alternatives --config python
+          sudo update-alternatives --config python3
+
+          # Install PIP and Virtualenv
+          curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+          python get-pip.py
+          rm -rf get-pip.py
+          pip install virtualenv
+
+          # Install EdgeDB
+          sudo mkdir -p /usr/local/share/keyrings && \
+          sudo curl --proto '=https' --tlsv1.2 -sSf \
+            -o /usr/local/share/keyrings/edgedb-keyring.gpg \
+            https://packages.edgedb.com/keys/edgedb-keyring.gpg
+
+          echo deb [signed-by=/usr/local/share/keyrings/edgedb-keyring.gpg]\
+            https://packages.edgedb.com/apt \
+            $(grep "VERSION_CODENAME=" /etc/os-release | cut -d= -f2) main \
+            | sudo tee /etc/apt/sources.list.d/edgedb.list
+
+          sudo apt-get update && sudo apt-get install -y edgedb-2
+
+          # Setup EdgeDB
+          cd edgedb
+          edgedb server install
+          sudo -u edgedb edgedb instance create --non-interactive --default-database edgedb --default-user test --port 5656 local_edgegraph
+          echo "test" | sudo -u edgedb edgedb instance reset-password --password-from-stdin --user test --quiet -I local_edgegraph
+          sudo -u edgedb edgedb migrate -I local_edgegraph
+          cd -
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Load cached venv
+        id: cache
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/ci.yml') }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install Dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --upgrade pip setuptools wheel
+          poetry install
+
+      - name: Fix PATH Environment Variable
+        run: |
+          echo "$(pwd)/.venv/bin" >> $GITHUB_PATH
+
+      - name: Run Tests
+        run: pytest -v --cov=edgegraph --cov-report=xml tests
+        env:
+          EDGEDB_DSN: edgedb://test:test@localhost:5656/edgedb
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v1
+        with:
+          file: ./coverage.xml
+          verbose: true
