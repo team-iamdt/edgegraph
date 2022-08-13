@@ -112,7 +112,7 @@ async def insert_movie(title: str, year: int, actors: list[str]):
 
 ### 구현 순서
 
- - [ ] `EdgeModel`과 `EdgeDB Schema`가 일치하는지 검증하는 모듈 구현하기
+ - [x] `EdgeModel`과 `EdgeDB Schema`가 일치하는지 검증하는 모듈 구현하기
  - [ ] Query Builder의 초기 구현
  - [ ] `EdgeQL`을 실행한 결과물을 Python 모델로 역직렬화 할 수 있는 모듈 구현
  - [ ] Query Builder와 각 기능들의 개선
