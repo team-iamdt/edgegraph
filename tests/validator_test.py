@@ -84,14 +84,8 @@ async def test_validator_with_valid_edgemodels(edgedb_dsn):
         check_validation_rules=True,
     )
 
-    try:
-        assert await validator.validate() is True
-    except ValidationError as e:
-        print(e.errors)
-        print(e.message)
-        pytest.fail(e)
-    finally:
-        await validator.aclose()
+    assert await validator.validate() is True
+    await validator.aclose()
 
 
 @pytest.mark.asyncio
