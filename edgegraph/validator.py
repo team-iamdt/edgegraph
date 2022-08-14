@@ -352,6 +352,14 @@ class SchemaValidator:
         return errors
 
     async def validate(self) -> bool:
+        """
+        Validate all models in the database.
+        We don't use ReflectedModels in this Validation. And uses pydantics schema for Validation.
+        This brings to some advantage for checking referenced types.
+
+        :return: bool - True if all models are valid, otherwise raises ValidationError
+        :raise: ValidationError - if any model is invalid
+        """
         # check models first
         subclass_errors: t.List[ValidatedErrorValue] = []
         for model in self._models:
@@ -398,4 +406,7 @@ class SchemaValidator:
         return True
 
     async def aclose(self):
+        """
+        Close the EdgeDB AsyncIOClient
+        """
         await self._client.aclose()

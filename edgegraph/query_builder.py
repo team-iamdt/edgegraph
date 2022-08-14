@@ -1,0 +1,2 @@
+class QueryBuilderBase:
+    pass
