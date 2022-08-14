@@ -1,6 +1,7 @@
 import typing as t
 import uuid
 
+from edgegraph.reflections import EdgeGraphField
 from edgegraph.schema import EdgeModel, ReflectedFields
 import pendulum
 from pydantic import Field
@@ -25,8 +26,10 @@ def test_reflect_fields_are_valid():
     assert type(UserModel.fields()) is ReflectedFields
 
     # check dot notation
-    assert UserModel.fields().email == ("email", str)
-    assert UserModel.fields().created_at == ("created_at", pendulum.DateTime)
+    assert UserModel.fields().email == EdgeGraphField("UserModel", "email", str)
+    assert UserModel.fields().created_at == EdgeGraphField(
+        "UserModel", "created_at", pendulum.DateTime
+    )
 
     assert UserModel.fields().__fields__ == {
         "id": uuid.UUID,

@@ -1,21 +1,8 @@
 import typing as t
 
 from edgegraph.query_builder.select import SelectQueryBuilder
+from edgegraph.reflections import ReflectedFields
 from pydantic import BaseModel
-
-T = t.TypeVar("T")
-V = t.TypeVar("V")
-
-
-class ReflectedFields(t.Generic[T]):
-    def __init__(self, cls: t.Type[T]):
-        hints = t.get_type_hints(cls)
-        del hints["__field_cache__"]
-
-        self.__fields__ = hints
-        for field, value in hints.items():
-            # set name and value as tuple
-            self.__setattr__(field, (field, value))
 
 
 class EdgeModel(BaseModel):

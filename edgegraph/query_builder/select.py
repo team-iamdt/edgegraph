@@ -6,12 +6,10 @@ from edgegraph.query_builder.base import (
     EmptyStrategyEnum,
     OrderEnum,
     QueryBuilderBase,
+    SelectionField,
     T,
 )
-
-
-Field: t.TypeAlias = t.Tuple[str, t.Any]
-ExpressionField: t.TypeAlias = t.Tuple[str, Expression]
+from edgegraph.reflections import EdgeGraphField
 
 
 class SelectQueryBuilder(QueryBuilderBase):
@@ -20,7 +18,7 @@ class SelectQueryBuilder(QueryBuilderBase):
     _offset: t.Optional[int]
     _order_by: t.Optional[t.Tuple[str, OrderEnum]]
     _empty_strategy: t.Optional[EmptyStrategyEnum]
-    _fields: t.List[t.Union[Field, ExpressionField, t.Tuple[str, "SelectQueryBuilder"]]]
+    _fields: t.List[SelectionField]
     _filters: t.List[Expression]
 
     def __init__(self, cls: t.Type[T]):
@@ -42,16 +40,16 @@ class SelectQueryBuilder(QueryBuilderBase):
 
     def order(
         self,
-        field: Field,
+        field: EdgeGraphField,
         order: OrderEnum,
         empty: t.Optional[EmptyStrategyEnum] = None,
     ):
-        field_name, field_value = field
+        field_name = field.name
 
         # check avilable class fields and queries fields
         available_fields = [
             *self.base_cls.fields().__fields__.keys(),
-            *[field[0] for field in self._fields],
+            *[field.name for field in self._fields],
         ]
         if field_name not in available_fields:
             raise ConditionValidationError(
@@ -63,43 +61,54 @@ class SelectQueryBuilder(QueryBuilderBase):
         return self
 
     def field(
-        self, field: t.Union[Field, ExpressionField, t.Tuple[str, "SelectQueryBuilder"]]
+        self,
+        field: t.Union[EdgeGraphField, SelectionField],
     ):
-        field_name, field_value = field
+        # First Create SelectionField if field is EdgeGraphField
+        if isinstance(field, EdgeGraphField):
+            selection_field = SelectionField(name=field.name, type=field.type)
+        else:
+            selection_field = field
 
-        if field_name in [f[0] for f in self._fields]:
-            raise ConditionValidationError(field_name, "Field already exists.")
+        # Check if field is already in fields
+        if selection_field.name in [f.name for f in self._fields]:
+            raise ConditionValidationError(
+                selection_field.name, "Field already exists."
+            )
 
-        if issubclass(type(field_value), Expression):
-            # here is logic for expression.
-            if field_value.base_cls is not self.base_cls:
-                raise QueryContextMissmatchingError(self.base_cls, field_value.base_cls)
-        elif type(field_value) is SelectQueryBuilder:
-            # here is logic for subquery.
-            filtered = list(
-                filter(
-                    lambda f: f[0] == field_name,
+        # Check if field contains subquery or expression or default field type
+        if selection_field.subquery is not None:
+            filtered = [
+                *filter(
+                    lambda f: f[0] == selection_field.name,
                     self.base_cls.fields().__fields__.items(),
                 )
-            )
-            if len(filtered) == 0:
-                raise ConditionValidationError(field_name, "Field does not exist.")
+            ]
 
-            (_, filtered_type) = filtered[0]
-            if not (
-                filtered_type is field_value.base_cls
-                or issubclass(t.get_args(filtered_type)[0], field_value.base_cls)
-            ):
-                raise QueryContextMissmatchingError(filtered_type, field_value.base_cls)
-        else:
-            # here is logic for field
-            available_fields = self.base_cls.fields().__fields__.keys()
-            if field_name not in available_fields:
+            if len(filtered) == 0:
                 raise ConditionValidationError(
-                    f"Field {field_name} does not exist in {self.base_cls}."
+                    selection_field.name, "Field does not exist."
                 )
 
-        self._fields.append(field)
+            (_, filtered_type) = filtered[0]
+            if selection_field.type is None or (
+                filtered_type is not selection_field.type
+                and issubclass(t.get_args(filtered_type)[0], selection_field.type)
+            ):
+                raise QueryContextMissmatchingError(filtered_type)
+        elif selection_field.expression is not None:
+            if selection_field.expression.base_cls is not self.base_cls:
+                raise QueryContextMissmatchingError(
+                    self.base_cls, selection_field.expression.base_cls
+                )
+        else:
+            available_fields = self.base_cls.fields().__fields__.keys()
+            if selection_field.name not in available_fields:
+                raise ConditionValidationError(
+                    f"Field {selection_field.name} does not exist in {self.base_cls}."
+                )
+
+        self._fields.append(selection_field)
         return self
 
     def filter(self, expr: Expression):
@@ -119,16 +128,15 @@ class SelectQueryBuilder(QueryBuilderBase):
         # build selected fields with module/model name
         query = f"with module {module} select {model_name} {{\n"
         for field in self._fields:
-            field_name, field_value = field
-
-            if type(field_value) is SelectQueryBuilder:
-                query += f"{field_name}: {field_value.build_select_subquery()},"
+            if field.subquery is not None and isinstance(
+                field.subquery, SelectQueryBuilder
+            ):
+                query += f"{field.name}: {field.subquery.build_select_subquery()},"
                 query += "\n"
-            elif issubclass(type(field_value), Expression):
-                expr: Expression = field_value  # type: ignore
-                query += f"{field_name}: {expr.to_query()},\n"
+            elif field.expression is not None:
+                query += f"{field.name}: {field.expression.to_query()},\n"
             else:
-                query += f"{field_name},\n"
+                query += f"{field.name},\n"
         query += "}\n"
 
         # build filters
@@ -164,15 +172,14 @@ class SelectQueryBuilder(QueryBuilderBase):
     def build_select_subquery(self) -> str:
         query = "{\n"
         for field in self._fields:
-            field_name, field_value = field
-
-            if type(field_value) is SelectQueryBuilder:
-                query += field_value.build_select_subquery()
+            if field.subquery is not None and isinstance(
+                field.subquery, SelectQueryBuilder
+            ):
+                query += f"{field.name}: {field.subquery.build_select_subquery()},"
                 query += "\n"
-            elif issubclass(type(field_value), Expression):
-                expr: Expression = field_value  # type: ignore
-                query += f"{field_name}: {expr.to_query()},\n"
+            elif field.expression is not None:
+                query += f"{field.name}: {field.expression.to_query()},\n"
             else:
-                query += f"{field_name},\n"
+                query += f"{field.name},\n"
         query += "}"
         return query
