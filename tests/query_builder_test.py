@@ -2,6 +2,7 @@ import asyncio
 import os
 from textwrap import dedent
 
+from edgegraph.errors import QueryContextMissmatchError
 from edgegraph.query_builder.base import EmptyStrategyEnum, OrderEnum, reference
 import pytest
 import tests.models as m
@@ -23,8 +24,7 @@ def edgedb_dsn():
     return dsn
 
 
-@pytest.mark.asyncio
-async def test_valid_select_query_with_edgeql():
+def test_valid_select_query_with_edgeql():
     UserModel = m.UserModel
     MemoModel = m.MemoModel
 
@@ -69,6 +69,28 @@ async def test_valid_select_query_with_edgeql():
     assert dedent(memo_select) == dedent(check_query)[1:-1]
 
 
-# @pytest.mark.asyncio
-# async def test_invalid_fields_in_select_query(edgedb_dsn):
-#      pass
+def test_invalid_fields_in_select_query():
+    UserModel = m.UserModel
+    MemoModel = m.MemoModel
+
+    user_subquery = (
+        UserModel.select().field(UserModel.fields().id).field(UserModel.fields().name)
+    )
+
+    with pytest.raises(QueryContextMissmatchError):
+        (
+            MemoModel.select()
+            .field(MemoModel.fields().id)
+            .field(MemoModel.fields().content)
+            .field(UserModel.fields().created_at)
+            .field(reference(MemoModel.fields().created_by, subquery=user_subquery))
+            .field(
+                reference(MemoModel.fields().accessable_users, subquery=user_subquery)
+            )
+            .limit(10)
+            .offset(0)
+            .order(
+                MemoModel.fields().created_at, OrderEnum.DESC, EmptyStrategyEnum.LAST
+            )
+            .build()
+        )

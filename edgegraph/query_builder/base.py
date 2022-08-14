@@ -41,6 +41,7 @@ class QueryBuilderBase(t.Generic[T], metaclass=abc.ABCMeta):
 class SelectionField(t.Generic[T]):
     name: str
     type: t.Optional[t.Type[T]] = None
+    upper_type_name: t.Optional[str] = None
     expression: t.Optional[Expression] = None
     subquery: t.Optional[QueryBuilderBase] = None
 
@@ -63,8 +64,16 @@ def reference(
     if isinstance(field, EdgeGraphField):
         name = field.name
         typ = field.type
+        upper_type_name = field.class_name
     else:
         name = field
         typ = None
+        upper_type_name = None
 
-    return SelectionField(name=name, type=typ, expression=expression, subquery=subquery)
+    return SelectionField(
+        name=name,
+        type=typ,
+        expression=expression,
+        subquery=subquery,
+        upper_type_name=upper_type_name,
+    )
