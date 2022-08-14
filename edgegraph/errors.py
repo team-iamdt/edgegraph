@@ -36,12 +36,16 @@ class ConditionValidationError(Exception):
         return f"{self.condition} already exists. Message: {self.message}"
 
 
-class QueryContextMissmatchingError(Exception):
-    builder: t.Type
-    expression: t.Optional[t.Type]
+class QueryContextMissmatchError(Exception):
+    builder: t.Union[t.Type, str]
+    expression: t.Optional[t.Union[t.Type, str]]
     message: str
 
-    def __init__(self, builder: t.Type, expression: t.Optional[t.Type] = None):
+    def __init__(
+        self,
+        builder: t.Union[t.Type, str],
+        expression: t.Optional[t.Union[t.Type, str]] = None,
+    ):
         self.builder = builder
         self.expression = expression
         self.message = (

@@ -1,6 +1,6 @@
 import typing as t
 
-from edgegraph.errors import ConditionValidationError, QueryContextMissmatchingError
+from edgegraph.errors import ConditionValidationError, QueryContextMissmatchError
 from edgegraph.expressions import Expression
 from edgegraph.query_builder.base import (
     EmptyStrategyEnum,
@@ -66,9 +66,19 @@ class SelectQueryBuilder(QueryBuilderBase):
     ):
         # First Create SelectionField if field is EdgeGraphField
         if isinstance(field, EdgeGraphField):
-            selection_field = SelectionField(name=field.name, type=field.type)
+            selection_field = SelectionField(
+                name=field.name, type=field.type, upper_type_name=field.class_name
+            )
         else:
             selection_field = field
+
+        if (
+            selection_field.upper_type_name is not None
+            and selection_field.upper_type_name != self.base_cls.__name__
+        ):
+            raise QueryContextMissmatchError(
+                selection_field.upper_type_name, self.base_cls
+            )
 
         # Check if field is already in fields
         if selection_field.name in [f.name for f in self._fields]:
@@ -95,10 +105,10 @@ class SelectQueryBuilder(QueryBuilderBase):
                 filtered_type is not selection_field.type
                 and issubclass(t.get_args(filtered_type)[0], selection_field.type)
             ):
-                raise QueryContextMissmatchingError(filtered_type)
+                raise QueryContextMissmatchError(filtered_type)
         elif selection_field.expression is not None:
             if selection_field.expression.base_cls is not self.base_cls:
-                raise QueryContextMissmatchingError(
+                raise QueryContextMissmatchError(
                     self.base_cls, selection_field.expression.base_cls
                 )
         else:
