@@ -2,7 +2,7 @@ import asyncio
 import os
 from textwrap import dedent
 
-from edgegraph.query_builder.base import EmptyStrategyEnum, OrderEnum
+from edgegraph.query_builder.base import EmptyStrategyEnum, OrderEnum, reference
 import pytest
 import tests.models as m
 
@@ -37,19 +37,15 @@ async def test_valid_select_query_with_edgeql():
         .field(MemoModel.fields().id)
         .field(MemoModel.fields().content)
         .field(MemoModel.fields().created_at)
-        .field(("created_by", user_subquery))
-        .field(("accessable_users", user_subquery))
+        .field(reference(MemoModel.fields().created_by, subquery=user_subquery))
+        .field(reference(MemoModel.fields().accessable_users, subquery=user_subquery))
         .limit(10)
         .offset(0)
         .order(MemoModel.fields().created_at, OrderEnum.DESC, EmptyStrategyEnum.LAST)
         .build()
     )
 
-    # Dedent check is might be remove first, and last line break.
-    assert (
-        dedent(memo_select)
-        == dedent(
-            """
+    check_query = """
         with module default select Memo {
         id,
         content,
@@ -67,9 +63,10 @@ async def test_valid_select_query_with_edgeql():
         offset 0
         limit 10
         ;
-        """
-        )[1:-1]
-    )
+    """
+
+    # Dedent check is might be remove first, and last line break.
+    assert dedent(memo_select) == dedent(check_query)[1:-1]
 
 
 # @pytest.mark.asyncio

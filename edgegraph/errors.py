@@ -38,10 +38,10 @@ class ConditionValidationError(Exception):
 
 class QueryContextMissmatchingError(Exception):
     builder: t.Type
-    expression: t.Type
+    expression: t.Optional[t.Type]
     message: str
 
-    def __init__(self, builder: t.Type, expression: t.Type):
+    def __init__(self, builder: t.Type, expression: t.Optional[t.Type] = None):
         self.builder = builder
         self.expression = expression
         self.message = (
