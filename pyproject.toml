@@ -24,7 +24,7 @@ version_files = [
 bump_message = "bump: $current_version → $new_version [skip-ci]"
 
 [tool.poetry.dependencies]
-python = ">=3.7,<4.0"
+python = ">=3.9,<4.0"
 pendulum = "^2.1.2"
 edgedb = "^0.24.0"
 pydantic = "^1.9.2"
