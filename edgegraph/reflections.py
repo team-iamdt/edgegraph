@@ -1,6 +1,11 @@
 import typing as t
 from dataclasses import dataclass
 
+from pydantic import BaseModel
+
+ModelMetaclass: t.Type = type(BaseModel)
+
+
 T = t.TypeVar("T")
 V = t.TypeVar("V")
 
@@ -12,9 +17,12 @@ class EdgeGraphField(t.Generic[T]):
     type: t.Type[T]
 
 
-class ReflectedFields(t.Generic[T]):
-    def __init__(self, cls: t.Type[T]):
-        hints = t.get_type_hints(cls)
+class EdgeMetaclass(ModelMetaclass):  # type: ignore
+    def __new__(cls: t.Type["EdgeMetaclass"], cls_name: str, bases, attrs):
+        # noinspection PyTypeChecker
+        result_type = super().__new__(cls, cls_name, bases, attrs)
+
+        hints = t.get_type_hints(result_type)
 
         # Remove ClassVar
         names = []
@@ -24,9 +32,10 @@ class ReflectedFields(t.Generic[T]):
         for name in names:
             del hints[name]
 
-        self.__fields__ = hints
+        result_type.__hints__ = hints
         for field, value in hints.items():
             # set name and value as tuple
-            self.__setattr__(
-                field, EdgeGraphField(class_name=cls.__name__, name=field, type=value)
-            )
+            field_value = EdgeGraphField(class_name=cls_name, name=field, type=value)
+            setattr(result_type, field, field_value)
+
+        return result_type

@@ -48,7 +48,7 @@ class SelectQueryBuilder(QueryBuilderBase):
 
         # check avilable class fields and queries fields
         available_fields = [
-            *self.base_cls.fields.__fields__.keys(),
+            *self.base_cls.__hints__.keys(),
             *[field.name for field in self._fields],
         ]
         if field_name not in available_fields:
@@ -91,7 +91,7 @@ class SelectQueryBuilder(QueryBuilderBase):
             filtered = [
                 *filter(
                     lambda f: f[0] == selection_field.name,
-                    self.base_cls.fields.__fields__.items(),
+                    self.base_cls.__hints__.items(),
                 )
             ]
 
@@ -112,7 +112,7 @@ class SelectQueryBuilder(QueryBuilderBase):
                     self.base_cls, selection_field.expression.base_cls
                 )
         else:
-            available_fields = self.base_cls.fields.__fields__.keys()
+            available_fields = self.base_cls.__hints__.keys()
             if selection_field.name not in available_fields:
                 raise ConditionValidationError(
                     f"Field {selection_field.name} does not exist in {self.base_cls}."

@@ -297,7 +297,7 @@ python-versions = ">=3.6"
 name = "mypy"
 version = "0.971"
 description = "Optional static typing for Python"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.6"
 
@@ -315,7 +315,7 @@ reports = ["lxml"]
 name = "mypy-extensions"
 version = "0.4.3"
 description = "Experimental type system extensions for programs checked with the mypy typechecker."
-category = "dev"
+category = "main"
 optional = false
 python-versions = "*"
 
@@ -608,7 +608,7 @@ python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 
@@ -681,7 +681,7 @@ tomli = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.9,<4.0"
-content-hash = "6db13679ada96c8be8a2d56b0a64d8ad57c8735ae67b628ef37eddcf98e42840"
+content-hash = "c94a4d1d5e7a8f5de3fdbb4c419f8a6bc7b028fe0d999153439625a07610fc87"
 
 [metadata.files]
 argcomplete = []

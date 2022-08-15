@@ -5,7 +5,7 @@ import pendulum
 from pydantic import Field
 
 from edgegraph.reflections import EdgeGraphField
-from edgegraph.schema import EdgeModel, ReflectedFields
+from edgegraph.schema import EdgeModel
 
 
 def test_reflect_fields_are_valid():
@@ -24,15 +24,13 @@ def test_reflect_fields_are_valid():
             module: str = "default"
             name: str = "User"
 
-    assert type(UserModel.fields) == ReflectedFields
-
     # check dot notation
-    assert UserModel.fields.email == EdgeGraphField("UserModel", "email", str)
-    assert UserModel.fields.created_at == EdgeGraphField(
+    assert UserModel.email == EdgeGraphField("UserModel", "email", str)
+    assert UserModel.created_at == EdgeGraphField(
         "UserModel", "created_at", pendulum.DateTime
     )
 
-    assert UserModel.fields.__fields__ == {
+    assert UserModel.__hints__ == {
         "id": uuid.UUID,
         "updated_at": pendulum.DateTime,
         "created_at": pendulum.DateTime,
