@@ -15,7 +15,14 @@ class EdgeGraphField(t.Generic[T]):
 class ReflectedFields(t.Generic[T]):
     def __init__(self, cls: t.Type[T]):
         hints = t.get_type_hints(cls)
-        del hints["__field_cache__"]
+
+        # Remove ClassVar
+        names = []
+        for name, typ in hints.items():
+            if t.get_origin(typ) is t.ClassVar:
+                names.append(name)
+        for name in names:
+            del hints[name]
 
         self.__fields__ = hints
         for field, value in hints.items():

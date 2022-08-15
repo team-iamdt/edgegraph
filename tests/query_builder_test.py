@@ -30,19 +30,19 @@ def test_valid_select_query_with_edgeql():
     MemoModel = m.MemoModel
 
     user_subquery = (
-        UserModel.select().field(UserModel.fields().id).field(UserModel.fields().name)
+        UserModel.select().field(UserModel.fields.id).field(UserModel.fields.name)
     )
 
     memo_select = (
         MemoModel.select()
-        .field(MemoModel.fields().id)
-        .field(MemoModel.fields().content)
-        .field(MemoModel.fields().created_at)
-        .field(reference(MemoModel.fields().created_by, subquery=user_subquery))
-        .field(reference(MemoModel.fields().accessable_users, subquery=user_subquery))
+        .field(MemoModel.fields.id)
+        .field(MemoModel.fields.content)
+        .field(MemoModel.fields.created_at)
+        .field(reference(MemoModel.fields.created_by, subquery=user_subquery))
+        .field(reference(MemoModel.fields.accessable_users, subquery=user_subquery))
         .limit(10)
         .offset(0)
-        .order(MemoModel.fields().created_at, OrderEnum.DESC, EmptyStrategyEnum.LAST)
+        .order(MemoModel.fields.created_at, OrderEnum.DESC, EmptyStrategyEnum.LAST)
         .build()
     )
 
@@ -75,23 +75,19 @@ def test_invalid_fields_in_select_query():
     MemoModel = m.MemoModel
 
     user_subquery = (
-        UserModel.select().field(UserModel.fields().id).field(UserModel.fields().name)
+        UserModel.select().field(UserModel.fields.id).field(UserModel.fields.name)
     )
 
     with pytest.raises(QueryContextMissmatchError):
         (
             MemoModel.select()
-            .field(MemoModel.fields().id)
-            .field(MemoModel.fields().content)
-            .field(UserModel.fields().created_at)
-            .field(reference(MemoModel.fields().created_by, subquery=user_subquery))
-            .field(
-                reference(MemoModel.fields().accessable_users, subquery=user_subquery)
-            )
+            .field(MemoModel.fields.id)
+            .field(MemoModel.fields.content)
+            .field(UserModel.fields.created_at)
+            .field(reference(MemoModel.fields.created_by, subquery=user_subquery))
+            .field(reference(MemoModel.fields.accessable_users, subquery=user_subquery))
             .limit(10)
             .offset(0)
-            .order(
-                MemoModel.fields().created_at, OrderEnum.DESC, EmptyStrategyEnum.LAST
-            )
+            .order(MemoModel.fields.created_at, OrderEnum.DESC, EmptyStrategyEnum.LAST)
             .build()
         )
