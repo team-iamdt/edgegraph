@@ -1,24 +1,26 @@
 import typing as t
 
+from edgedb.abstract import QueryWithArgs
+
 from edgegraph.errors import ConditionValidationError, QueryContextMissmatchError
-from edgegraph.expressions import Expression
+from edgegraph.expressions.base import Expression
 from edgegraph.query_builder.base import (
     EmptyStrategyEnum,
     OrderEnum,
     QueryBuilderBase,
-    SelectionField,
+    SelectQueryField,
     T,
 )
 from edgegraph.reflections import EdgeGraphField
 
 
-class SelectQueryBuilder(QueryBuilderBase):
+class SelectQueryBuilder(QueryBuilderBase[T]):
     query_type = "SELECT"
     _limit: t.Optional[int]
     _offset: t.Optional[int]
     _order_by: t.Optional[t.Tuple[str, OrderEnum]]
     _empty_strategy: t.Optional[EmptyStrategyEnum]
-    _fields: t.List[SelectionField]
+    _fields: t.List[SelectQueryField]
     _filters: t.List[Expression]
 
     def __init__(self, cls: t.Type[T]):
@@ -62,11 +64,11 @@ class SelectQueryBuilder(QueryBuilderBase):
 
     def field(
         self,
-        field: t.Union[EdgeGraphField, SelectionField],
+        field: t.Union[EdgeGraphField, SelectQueryField],
     ):
-        # First Create SelectionField if field is EdgeGraphField
+        # First Create SelectField if field is EdgeGraphField
         if isinstance(field, EdgeGraphField):
-            selection_field = SelectionField(
+            selection_field = SelectQueryField(
                 name=field.name, type=field.type, upper_type_name=field.class_name
             )
         else:
@@ -127,35 +129,47 @@ class SelectQueryBuilder(QueryBuilderBase):
         self._filters.append(expr)
         return self
 
-    def build(self) -> str:
-        model_name = (
-            self.base_cls.Config.name
-            if self.base_cls.Config.name
-            else self.base_cls.__name__
-        )
-        module = self.base_cls.Config.module
+    def _build(self, prefix: str = "") -> t.Tuple[str, t.Dict[str, t.Any]]:
+        arguments: t.Dict[str, t.Any] = {}
+        (module, model_name) = self.base_cls.get_schema_config()
+
+        self._fields.sort(key=lambda f: f.name)
+        self._filters.sort()
 
         # build selected fields with module/model name
-        query = f"with module {module} select {model_name} {{\n"
+        query = f"select {module}::{model_name} {{\n"
         for field in self._fields:
             if field.subquery is not None and isinstance(
                 field.subquery, SelectQueryBuilder
             ):
-                query += f"{field.name}: {field.subquery.build_select_subquery()},"
+                shape, dictionary = field.subquery.build_shape(prefix)
+                arguments.update(dictionary)
+                query += f"{field.name}: {shape},"
                 query += "\n"
+
             elif field.expression is not None:
-                query += f"{field.name}: {field.expression.to_query()},\n"
+                expr_query, expr_args = field.expression.to_query(prefix)
+                arguments.update(expr_args)
+                query += f"{field.name}: {expr_query},\n"
+
             else:
                 query += f"{field.name},\n"
+
         query += "}\n"
 
         # build filters
         if len(self._filters) > 0:
             query += "filter "
+
             for idx, filt in enumerate(self._filters):
-                query += f"{filt.to_query()}"
+                filtered_query, filtered_dict = filt.to_query()
+                arguments.update(filtered_dict)
+
+                query += f"{filtered_query}"
+
                 if (idx + 1) != len(self._filters):
                     query += " and "
+
             query += "\n"
 
         # build order by
@@ -170,26 +184,49 @@ class SelectQueryBuilder(QueryBuilderBase):
         if self._offset is not None:
             query += f"offset {self._offset}"
             query += "\n"
+
         if self._limit is not None:
             query += f"limit {self._limit}"
             query += "\n"
 
-        query += ";"
+        return query, arguments
 
-        print(query)
-        return query
-
-    def build_select_subquery(self) -> str:
+    def build_shape(self, prefix: str = "") -> t.Tuple[str, t.Dict[str, t.Any]]:
+        arguments: t.Dict[str, t.Any] = {}
         query = "{\n"
         for field in self._fields:
             if field.subquery is not None and isinstance(
                 field.subquery, SelectQueryBuilder
             ):
-                query += f"{field.name}: {field.subquery.build_select_subquery()},"
+                shape_prefix = (
+                    f"{prefix}__{field.name}" if len(prefix) > 0 else field.name
+                )
+                shape, dictionary = field.subquery.build_shape(shape_prefix)
+                arguments.update(dictionary)
+                query += f"{field.name}: {shape},"
                 query += "\n"
+
             elif field.expression is not None:
-                query += f"{field.name}: {field.expression.to_query()},\n"
+                expr, dictionary = field.expression.to_query(prefix)
+                arguments.update(dictionary)
+                query += f"{field.name}: {expr},\n"
+
             else:
                 query += f"{field.name},\n"
+
         query += "}"
+
+        return query, arguments
+
+    def build(self, prefix: str = "") -> QueryWithArgs:
+        query, args = self._build(prefix)
+
+        return QueryWithArgs(query, (), args)
+
+    def build_string(self, prefix: str = "") -> str:
+        query, args = self._build(prefix)
+
+        for key, value in args.items():
+            query = query.replace(f"${key}", f"'{str(value)}'")
+
         return query

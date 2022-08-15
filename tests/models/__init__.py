@@ -18,7 +18,7 @@ class UserModel(EdgeModel):
     password: str
     name: str = Field(min_length=3)
 
-    class Config:
+    class SchemaConfig:
         module: str = "default"
         name: str = "User"
 
@@ -37,7 +37,7 @@ class MemoModel(EdgeModel):
     created_by: UserModel
     accessable_users: t.List[UserModel] = Field(default=[])
 
-    class Config:
+    class SchemaConfig:
         module: str = "default"
         name: str = "Memo"
 
@@ -53,6 +53,6 @@ class CommentModel(EdgeModel):
     memo: MemoModel
     content: str
 
-    class Config:
+    class SchemaConfig:
         module: str = "default"
         name: str = "Comment"

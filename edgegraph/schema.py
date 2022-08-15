@@ -2,17 +2,13 @@ import typing as t
 
 from pydantic import BaseModel
 
+from edgegraph.query_builder.base import SelectQueryField
+from edgegraph.query_builder.insert import InsertQueryBuilder
 from edgegraph.query_builder.select import SelectQueryBuilder
-from edgegraph.reflections import EdgeMetaclass
+from edgegraph.reflections import Configurable, EdgeGraphField, EdgeMetaclass
 
 
-class EdgeModel(BaseModel, metaclass=EdgeMetaclass):
-    __hints__: t.ClassVar[t.Dict[str, t.Type[t.Any]]]
-
-    # @classmethod
-    # def insert(cls) -> InsertQueryBuilder:
-    #     pass
-    #
+class EdgeModel(BaseModel, Configurable, metaclass=EdgeMetaclass):
     # @classmethod
     # def update(cls) -> UpdateQueryBuilder:
     #     pass
@@ -22,9 +18,19 @@ class EdgeModel(BaseModel, metaclass=EdgeMetaclass):
     #     pass
 
     @classmethod
-    def select(cls) -> SelectQueryBuilder:
-        return SelectQueryBuilder(cls)
+    def select(
+        cls,
+        fields: t.Optional[t.List[t.Union[EdgeGraphField, SelectQueryField]]] = None,
+    ) -> SelectQueryBuilder:
+        builder = SelectQueryBuilder(cls)
+        if fields is not None:
+            fields.sort(key=lambda x: x.name)
 
-    class Config:
-        module: str = "default"
-        name: str
+            for field in fields:
+                builder = builder.field(field)
+
+        return builder
+
+    @classmethod
+    def insert(cls) -> InsertQueryBuilder:
+        return InsertQueryBuilder(cls)
