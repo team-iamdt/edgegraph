@@ -6,17 +6,19 @@ from edgegraph.query_builder.select import SelectQueryBuilder
 from edgegraph.reflections import ReflectedFields
 
 
-class EdgeModel(BaseModel):
-    __field_cache__: t.Optional[ReflectedFields] = None
+ModelMetaclass: t.Type = type(BaseModel)
 
-    @classmethod
-    def fields(cls):
-        # use cache if available
-        if cls.__field_cache__ is not None:
-            return cls.__field_cache__
 
-        cls.__field_cache__ = ReflectedFields(cls)
-        return cls.__field_cache__
+class EdgeMetaclass(ModelMetaclass):  # type: ignore
+    def __new__(cls: t.Type, cls_name: str, bases, attrs):
+        # noinspection PyTypeChecker
+        result_type = super().__new__(cls, cls_name, bases, attrs)
+        result_type.fields = ReflectedFields(result_type)
+        return result_type
+
+
+class EdgeModel(BaseModel, metaclass=EdgeMetaclass):
+    fields: t.ClassVar[ReflectedFields]
 
     # @classmethod
     # def insert(cls) -> InsertQueryBuilder:

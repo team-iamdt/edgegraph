@@ -2,6 +2,7 @@ import asyncio
 import os
 import typing as t
 import uuid
+from pprint import pprint
 
 import pendulum
 import pytest
@@ -29,7 +30,7 @@ def edgedb_dsn():
 
 
 @pytest.mark.asyncio
-async def test_validator_with_valid_edgemodels(edgedb_dsn, edgedb_models):
+async def test_validator_with_valid_edgemodels(edgedb_dsn):
     validator = SchemaValidator(
         edgedb_dsn,
         models={m.UserModel, m.MemoModel, m.CommentModel},
@@ -232,4 +233,5 @@ async def test_validator_with_missed_properties(edgedb_dsn):
 
     # Outline Error, 3 Properties Not Found in Memo.
     # Outline Error, 1 Property Not Found in User.
+    pprint(e.value.errors)
     assert len(e.value.errors) == 6

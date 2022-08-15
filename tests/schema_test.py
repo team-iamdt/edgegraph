@@ -24,15 +24,15 @@ def test_reflect_fields_are_valid():
             module: str = "default"
             name: str = "User"
 
-    assert type(UserModel.fields()) is ReflectedFields
+    assert type(UserModel.fields) == ReflectedFields
 
     # check dot notation
-    assert UserModel.fields().email == EdgeGraphField("UserModel", "email", str)
-    assert UserModel.fields().created_at == EdgeGraphField(
+    assert UserModel.fields.email == EdgeGraphField("UserModel", "email", str)
+    assert UserModel.fields.created_at == EdgeGraphField(
         "UserModel", "created_at", pendulum.DateTime
     )
 
-    assert UserModel.fields().__fields__ == {
+    assert UserModel.fields.__fields__ == {
         "id": uuid.UUID,
         "updated_at": pendulum.DateTime,
         "created_at": pendulum.DateTime,
