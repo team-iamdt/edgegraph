@@ -20,7 +20,7 @@ def test_reflect_fields_are_valid():
         password: str
         name: str = Field(min_length=3)
 
-        class Config:
+        class SchemaConfig:
             module: str = "default"
             name: str = "User"
 

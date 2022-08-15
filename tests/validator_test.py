@@ -2,7 +2,6 @@ import asyncio
 import os
 import typing as t
 import uuid
-from pprint import pprint
 
 import pendulum
 import pytest
@@ -56,7 +55,7 @@ async def test_validator_with_invalid_classes(edgedb_dsn):
         password: str
         name: str = Field(min_length=3)
 
-        class Config:
+        class SchemaConfig:
             module: str = "default"
             name: str = "User"
 
@@ -74,7 +73,7 @@ async def test_validator_with_invalid_classes(edgedb_dsn):
         created_by: UserModel
         accessable_users: t.List[UserModel] = Field(default=[])
 
-        class Config:
+        class SchemaConfig:
             module: str = "default"
             name: str = "Memo"
 
@@ -118,7 +117,7 @@ async def test_validator_with_invalid_edgemodels(edgedb_dsn):
         password: str
         name: str = Field(min_length=3)
 
-        class Config:
+        class SchemaConfig:
             module: str = "default"
             # changed type name to make invalid
             name: str = "Ussssser"
@@ -137,7 +136,7 @@ async def test_validator_with_invalid_edgemodels(edgedb_dsn):
         created_by: UserModel
         accessable_users: t.List[UserModel] = Field(default=[])
 
-        class Config:
+        class SchemaConfig:
             # changed module to make invalid
             module: str = "std"
             name: str = "Memo"
@@ -153,7 +152,7 @@ async def test_validator_with_invalid_edgemodels(edgedb_dsn):
         memo: MemoModel
         content: str
 
-        class Config:
+        class SchemaConfig:
             module: str = "default"
             name: str = "Comment"
 
@@ -184,7 +183,7 @@ async def test_validator_with_missed_properties(edgedb_dsn):
         password: str
         name: str = Field(min_length=3)
 
-        class Config:
+        class SchemaConfig:
             module: str = "default"
             name: str = "User"
 
@@ -199,7 +198,7 @@ async def test_validator_with_missed_properties(edgedb_dsn):
 
         created_by: UserModel
 
-        class Config:
+        class SchemaConfig:
             module: str = "default"
             name: str = "Memo"
 
@@ -214,7 +213,7 @@ async def test_validator_with_missed_properties(edgedb_dsn):
         memo: MemoModel
         content: str
 
-        class Config:
+        class SchemaConfig:
             module: str = "default"
             name: str = "Comment"
 
@@ -233,5 +232,4 @@ async def test_validator_with_missed_properties(edgedb_dsn):
 
     # Outline Error, 3 Properties Not Found in Memo.
     # Outline Error, 1 Property Not Found in User.
-    pprint(e.value.errors)
     assert len(e.value.errors) == 6

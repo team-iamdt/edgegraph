@@ -33,7 +33,7 @@ class ConditionValidationError(Exception):
         self.message = message
 
     def __str__(self):
-        return f"{self.condition} already exists. Message: {self.message}"
+        return f"Condition Error in {self.condition} Context. Message: {self.message}"
 
 
 class QueryContextMissmatchError(Exception):
@@ -54,3 +54,15 @@ class QueryContextMissmatchError(Exception):
 
     def __str__(self):
         return self.message
+
+
+class ExpressionError(Exception):
+    context: str
+    message: str
+
+    def __init__(self, context: str, message: str):
+        self.context = context
+        self.message = message
+
+    def __str__(self):
+        return f"Expression Error in {self.context} context: {self.message}"

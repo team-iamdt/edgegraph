@@ -3,11 +3,14 @@ import typing as t
 from dataclasses import dataclass
 from enum import Enum
 
-from edgegraph.errors import ConditionValidationError
-from edgegraph.expressions import Expression
-from edgegraph.reflections import EdgeGraphField
+from edgedb.abstract import QueryWithArgs
 
-T = t.TypeVar("T")
+from edgegraph.errors import ConditionValidationError
+from edgegraph.expressions.base import Expression
+from edgegraph.reflections import Configurable, EdgeGraphField
+from edgegraph.types import PrimitiveTypes
+
+T = t.TypeVar("T", bound=Configurable)
 
 
 class OrderEnum(Enum):
@@ -33,12 +36,16 @@ class QueryBuilderBase(t.Generic[T], metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def build(self) -> str:
+    def build(self, prefix: str = "") -> QueryWithArgs:
+        pass
+
+    @abc.abstractmethod
+    def build_string(self, prefix: str = "") -> str:
         pass
 
 
 @dataclass(frozen=True)
-class SelectionField(t.Generic[T]):
+class BaseQueryField(t.Generic[T]):
     name: str
     type: t.Optional[t.Type[T]] = None
     upper_type_name: t.Optional[str] = None
@@ -46,11 +53,22 @@ class SelectionField(t.Generic[T]):
     subquery: t.Optional[QueryBuilderBase] = None
 
 
+@dataclass(frozen=True)
+class SelectQueryField(BaseQueryField):
+    pass
+
+
+@dataclass(frozen=True)
+class InsertQueryField(BaseQueryField[T]):
+    value_type: t.Optional[PrimitiveTypes] = None  # type represented on edgedb
+    value: t.Optional[T] = None
+
+
 def reference(
     field: t.Union[EdgeGraphField, str],
     expression: t.Optional[Expression] = None,
     subquery: t.Optional[QueryBuilderBase] = None,
-) -> SelectionField:
+) -> BaseQueryField:
     if expression is None and subquery is None:
         raise ConditionValidationError(
             f"referencing {field}", "Subquery or Expression is Required"
@@ -70,7 +88,7 @@ def reference(
         typ = None
         upper_type_name = None
 
-    return SelectionField(
+    return BaseQueryField(
         name=name,
         type=typ,
         expression=expression,

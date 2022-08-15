@@ -10,6 +10,21 @@ T = t.TypeVar("T")
 V = t.TypeVar("V")
 
 
+class Configurable:
+    __hints__: t.ClassVar[t.Dict[str, t.Type[t.Any]]]
+
+    @classmethod
+    def get_schema_config(cls) -> t.Tuple[str, str]:
+        model_name = cls.SchemaConfig.name if cls.SchemaConfig.name else cls.__name__
+        module = cls.SchemaConfig.module
+
+        return module, model_name
+
+    class SchemaConfig:
+        module: str = "default"
+        name: str
+
+
 @dataclass(frozen=True)
 class EdgeGraphField(t.Generic[T]):
     class_name: str

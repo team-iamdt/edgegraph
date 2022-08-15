@@ -86,8 +86,7 @@ class SchemaValidator:
 
         target: t.List[str] = []
         for model in self._models:
-            name = model.__name__ if model.Config.name is None else model.Config.name
-            module = model.Config.module
+            (module, name) = model.get_schema_config()
             target.append(f"{module}::{name}")
 
         origin = [x.name for x in result]
@@ -212,6 +211,8 @@ class SchemaValidator:
         properties: e.Set,
         field: t.Tuple[str, t.Dict[str, t.Any]],
     ) -> t.Optional[ValidatedErrorValue]:
+        # TODO(Hazealign): Check property type with EdgeDB PrimitiveTypes
+
         (field_name, field_info) = field
         if field_name not in [prop.name for prop in properties]:
             return ValidatedErrorValue(
@@ -254,9 +255,7 @@ class SchemaValidator:
     ) -> t.List[ValidatedErrorValue]:
         schema = model.schema()
 
-        name = model.__name__ if model.Config.name is None else model.Config.name
-        module = model.Config.module
-
+        (module, name) = model.get_schema_config()
         type_name = f"{module}::{name}"
 
         # TODO(Hazealign): Migrate to Query Builder when Query Builder implemented
