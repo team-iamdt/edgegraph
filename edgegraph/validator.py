@@ -2,6 +2,7 @@ import asyncio
 import typing as t
 
 import edgedb as e
+
 from edgegraph.errors import ValidatedErrorValue, ValidationError
 from edgegraph.schema import EdgeModel
 

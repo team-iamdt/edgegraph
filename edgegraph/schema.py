@@ -1,8 +1,9 @@
 import typing as t
 
+from pydantic import BaseModel
+
 from edgegraph.query_builder.select import SelectQueryBuilder
 from edgegraph.reflections import ReflectedFields
-from pydantic import BaseModel
 
 
 class EdgeModel(BaseModel):

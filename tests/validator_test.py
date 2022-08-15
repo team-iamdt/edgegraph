@@ -3,12 +3,13 @@ import os
 import typing as t
 import uuid
 
+import pendulum
+import pytest
+from pydantic import Field
+
+import tests.models as m
 from edgegraph.schema import EdgeModel
 from edgegraph.validator import SchemaValidator, ValidationError
-import pendulum
-from pydantic import Field
-import pytest
-import tests.models as m
 
 
 @pytest.fixture(scope="module")

@@ -1,7 +1,7 @@
 import abc
+import typing as t
 from dataclasses import dataclass
 from enum import Enum
-import typing as t
 
 from edgegraph.errors import ConditionValidationError
 from edgegraph.expressions import Expression

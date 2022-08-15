@@ -13,6 +13,8 @@ skip_string_normalization = false
 black-line-length = 88
 keep-unused-type-checking = false
 multi-imports = true
+application-import-names = ["edgegraph", "tests"]
+application-package-names = ["edgegraph", "tests"]
 
 [tool.commitizen]
 name = "cz_conventional_commits"
