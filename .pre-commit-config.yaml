@@ -39,6 +39,7 @@ repos:
       - id: zimports
         name: zimports
         entry: zimports
+        args: ['--toml-config', './pyproject.toml']
         language: system
         types: [python]
 

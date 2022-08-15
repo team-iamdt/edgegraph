@@ -1,9 +1,10 @@
 import typing as t
 import uuid
 
-from edgegraph.schema import EdgeModel
 import pendulum
 from pydantic import Field
+
+from edgegraph.schema import EdgeModel
 
 
 class UserModel(EdgeModel):

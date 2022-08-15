@@ -2,10 +2,11 @@ import asyncio
 import os
 from textwrap import dedent
 
+import pytest
+
+import tests.models as m
 from edgegraph.errors import QueryContextMissmatchError
 from edgegraph.query_builder.base import EmptyStrategyEnum, OrderEnum, reference
-import pytest
-import tests.models as m
 
 
 @pytest.fixture(scope="module")
