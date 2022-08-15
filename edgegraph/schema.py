@@ -3,22 +3,11 @@ import typing as t
 from pydantic import BaseModel
 
 from edgegraph.query_builder.select import SelectQueryBuilder
-from edgegraph.reflections import ReflectedFields
-
-
-ModelMetaclass: t.Type = type(BaseModel)
-
-
-class EdgeMetaclass(ModelMetaclass):  # type: ignore
-    def __new__(cls: t.Type, cls_name: str, bases, attrs):
-        # noinspection PyTypeChecker
-        result_type = super().__new__(cls, cls_name, bases, attrs)
-        result_type.fields = ReflectedFields(result_type)
-        return result_type
+from edgegraph.reflections import EdgeMetaclass
 
 
 class EdgeModel(BaseModel, metaclass=EdgeMetaclass):
-    fields: t.ClassVar[ReflectedFields]
+    __hints__: t.ClassVar[t.Dict[str, t.Type[t.Any]]]
 
     # @classmethod
     # def insert(cls) -> InsertQueryBuilder:

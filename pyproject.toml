@@ -30,6 +30,7 @@ python = ">=3.9,<4.0"
 pendulum = "^2.1.2"
 edgedb = "^0.24.0"
 pydantic = "^1.9.2"
+mypy = "^0.971"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"
