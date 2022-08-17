@@ -5,6 +5,7 @@ from edgedb.abstract import QueryWithArgs
 from edgegraph.errors import ConditionValidationError, QueryContextMissmatchError
 from edgegraph.expressions.base import Expression
 from edgegraph.query_builder.base import (
+    BaseQueryField,
     EmptyStrategyEnum,
     OrderEnum,
     QueryBuilderBase,
@@ -14,6 +15,8 @@ from edgegraph.query_builder.base import (
 from edgegraph.reflections import EdgeGraphField
 
 
+# I removed some type signatures, cause of compatibility with defined schema's instance attribute type.
+# We can improve this after got api's stability.
 class SelectQueryBuilder(QueryBuilderBase[T]):
     query_type = "SELECT"
     _limit: t.Optional[int]
@@ -62,17 +65,18 @@ class SelectQueryBuilder(QueryBuilderBase[T]):
         self._empty_strategy = empty
         return self
 
-    def field(
-        self,
-        field: t.Union[EdgeGraphField, SelectQueryField],
-    ):
+    def field(self, field):
         # First Create SelectField if field is EdgeGraphField
         if isinstance(field, EdgeGraphField):
             selection_field = SelectQueryField(
                 name=field.name, type=field.type, upper_type_name=field.class_name
             )
-        else:
+        elif isinstance(field, BaseQueryField):
             selection_field = field
+        else:
+            raise TypeError(
+                "SelectQueryField.field can must be EdgeGraphField or SelectQueryField"
+            )
 
         if (
             selection_field.upper_type_name is not None

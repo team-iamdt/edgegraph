@@ -65,7 +65,7 @@ class InsertQueryField(BaseQueryField[T]):
 
 
 def reference(
-    field: t.Union[EdgeGraphField, str],
+    field,
     expression: t.Optional[Expression] = None,
     subquery: t.Optional[QueryBuilderBase] = None,
 ) -> BaseQueryField:
@@ -83,10 +83,12 @@ def reference(
         name = field.name
         typ = field.type
         upper_type_name = field.class_name
-    else:
+    elif type(field) is str:
         name = field
         typ = None
         upper_type_name = None
+    else:
+        raise TypeError("Referenced Field can be EdgeGraphField or str")
 
     return BaseQueryField(
         name=name,

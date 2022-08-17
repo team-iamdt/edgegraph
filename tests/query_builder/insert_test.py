@@ -39,8 +39,6 @@ def test_valid_insert_query_with_edgeql():
         .field(MemoModel.updated_at, date, value_type=PrimitiveTypes.DATETIME)
         .build()
     )
-    print(memo_insert.query)
-    print(memo_insert.kwargs)
 
     # check subquery
     assert memo_insert.kwargs == {
@@ -85,8 +83,6 @@ def test_valid_insert_query_with_subquery_with_edgeql():
         .field(MemoModel.updated_at, date, value_type=PrimitiveTypes.DATETIME)
         .build()
     )
-    print(memo_insert.query)
-    print(memo_insert.kwargs)
 
     # check subquery value contains
     result = False

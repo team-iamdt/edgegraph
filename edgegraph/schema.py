@@ -2,10 +2,9 @@ import typing as t
 
 from pydantic import BaseModel
 
-from edgegraph.query_builder.base import SelectQueryField
 from edgegraph.query_builder.insert import InsertQueryBuilder
 from edgegraph.query_builder.select import SelectQueryBuilder
-from edgegraph.reflections import Configurable, EdgeGraphField, EdgeMetaclass
+from edgegraph.reflections import Configurable, EdgeMetaclass
 
 
 class EdgeModel(BaseModel, Configurable, metaclass=EdgeMetaclass):
@@ -20,7 +19,7 @@ class EdgeModel(BaseModel, Configurable, metaclass=EdgeMetaclass):
     @classmethod
     def select(
         cls,
-        fields: t.Optional[t.List[t.Union[EdgeGraphField, SelectQueryField]]] = None,
+        fields: t.Optional[t.List] = None,
     ) -> SelectQueryBuilder:
         builder = SelectQueryBuilder(cls)
         if fields is not None:
