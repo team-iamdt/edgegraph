@@ -27,7 +27,7 @@ class InsertQueryBuilder(QueryBuilderBase):
 
     def field(
         self,
-        field: t.Union[EdgeGraphField[V], str],
+        field,
         value: t.Optional[V] = None,
         value_type: t.Optional[PrimitiveTypes] = None,
         expression: t.Optional[Expression] = None,
@@ -58,7 +58,7 @@ class InsertQueryBuilder(QueryBuilderBase):
                 raise ConditionValidationError(
                     field_name, f"Field does not exist in {self.base_cls}."
                 )
-        else:
+        elif isinstance(field, EdgeGraphField):
             field_name = field.name
             field_type = field.type
             upper_type_name = field.class_name
@@ -69,6 +69,8 @@ class InsertQueryBuilder(QueryBuilderBase):
                 raise ConditionValidationError(
                     field_name, f"Field does not exist in {self.base_cls}."
                 )
+        else:
+            raise TypeError("field can be EdgeGraphField or str")
 
         # check field is available in this model
         if upper_type_name != self.base_cls.__name__:
@@ -114,8 +116,10 @@ class InsertQueryBuilder(QueryBuilderBase):
         for field in fields:
             if isinstance(field, str):
                 new_fields.append(field[1:] if field.startswith(".") else field)
-            else:
+            elif isinstance(field, EdgeGraphField):
                 new_fields.append(field.name)
+            else:
+                raise TypeError("Fields can be str or EdgeGraphField.")
 
         if self._unless_conflict is None:
             self._unless_conflict = new_fields
