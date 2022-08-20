@@ -1,7 +1,5 @@
 import typing as t
 
-from edgedb.abstract import QueryWithArgs
-
 from edgegraph.errors import ConditionValidationError, QueryContextMissmatchError
 from edgegraph.expressions.base import Expression
 from edgegraph.query_builder.base import (
@@ -13,6 +11,7 @@ from edgegraph.query_builder.base import (
     T,
 )
 from edgegraph.reflections import EdgeGraphField
+from edgegraph.types import QueryResult
 
 
 class SelectQueryBuilder(QueryBuilderBase[T]):
@@ -134,7 +133,7 @@ class SelectQueryBuilder(QueryBuilderBase[T]):
         self._filters.append(expr)
         return self
 
-    def _build(self, prefix: str = "") -> t.Tuple[str, t.Dict[str, t.Any]]:
+    def build(self, prefix: str = "") -> QueryResult:
         arguments: t.Dict[str, t.Any] = {}
         (module, model_name) = self.base_cls.get_schema_config()
 
@@ -144,18 +143,22 @@ class SelectQueryBuilder(QueryBuilderBase[T]):
         # build selected fields with module/model name
         query = f"select {module}::{model_name} {{\n"
         for field in self._fields:
+            keyword_prefix = (
+                field.name if len(prefix) == 0 else f"{prefix}__{field.name}"
+            )
+
             if field.subquery is not None and isinstance(
                 field.subquery, SelectQueryBuilder
             ):
-                shape, dictionary = field.subquery.build_shape(prefix)
-                arguments.update(dictionary)
-                query += f"{field.name}: {shape},"
+                subquery_shape = field.subquery.build_shape(keyword_prefix)
+                arguments.update(subquery_shape.kwargs)
+                query += f"{field.name}: {subquery_shape.query},"
                 query += "\n"
 
             elif field.expression is not None:
-                expr_query, expr_args = field.expression.to_query(prefix)
-                arguments.update(expr_args)
-                query += f"{field.name}: {expr_query},\n"
+                expression = field.expression.build(keyword_prefix)
+                arguments.update(expression.kwargs)
+                query += f"{field.name}: {expression.kwargs},\n"
 
             else:
                 query += f"{field.name},\n"
@@ -167,10 +170,16 @@ class SelectQueryBuilder(QueryBuilderBase[T]):
             query += "filter "
 
             for idx, filt in enumerate(self._filters):
-                filtered_query, filtered_dict = filt.to_query()
-                arguments.update(filtered_dict)
+                filter_prefix = (
+                    f"filter_{id(filt)}"
+                    if len(prefix) == 0
+                    else f"{prefix}__filter_{id(filt)}"
+                )
 
-                query += f"{filtered_query}"
+                filter_result = filt.build(filter_prefix)
+                arguments.update(filter_result.kwargs)
+
+                query += f"{filter_result.query}"
 
                 if (idx + 1) != len(self._filters):
                     query += " and "
@@ -194,44 +203,30 @@ class SelectQueryBuilder(QueryBuilderBase[T]):
             query += f"limit {self._limit}"
             query += "\n"
 
-        return query, arguments
+        return QueryResult(query, arguments)
 
-    def build_shape(self, prefix: str = "") -> t.Tuple[str, t.Dict[str, t.Any]]:
+    def build_shape(self, prefix: str = "") -> QueryResult:
         arguments: t.Dict[str, t.Any] = {}
         query = "{\n"
         for field in self._fields:
+            field_prefix = f"{prefix}__{field.name}" if len(prefix) > 0 else field.name
+
             if field.subquery is not None and isinstance(
                 field.subquery, SelectQueryBuilder
             ):
-                shape_prefix = (
-                    f"{prefix}__{field.name}" if len(prefix) > 0 else field.name
-                )
-                shape, dictionary = field.subquery.build_shape(shape_prefix)
-                arguments.update(dictionary)
-                query += f"{field.name}: {shape},"
+                subquery = field.subquery.build_shape(field_prefix)
+                arguments.update(subquery.kwargs)
+                query += f"{field.name}: {subquery.query},"
                 query += "\n"
 
             elif field.expression is not None:
-                expr, dictionary = field.expression.to_query(prefix)
-                arguments.update(dictionary)
-                query += f"{field.name}: {expr},\n"
+                expression = field.expression.build(field_prefix)
+                arguments.update(expression.kwargs)
+                query += f"{field.name}: {expression.query},\n"
 
             else:
                 query += f"{field.name},\n"
 
         query += "}"
 
-        return query, arguments
-
-    def build(self, prefix: str = "") -> QueryWithArgs:
-        query, args = self._build(prefix)
-
-        return QueryWithArgs(query, (), args)
-
-    def build_string(self, prefix: str = "") -> str:
-        query, args = self._build(prefix)
-
-        for key, value in args.items():
-            query = query.replace(f"${key}", f"'{str(value)}'")
-
-        return query
+        return QueryResult(query, arguments)
