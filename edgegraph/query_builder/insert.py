@@ -12,7 +12,7 @@ from edgegraph.types import PrimitiveTypes
 V = t.TypeVar("V")
 
 
-class InsertQueryBuilder(QueryBuilderBase):
+class InsertQueryBuilder(QueryBuilderBase[T]):
     query_type = "INSERT"
 
     _unless_conflict: t.Optional[t.List[str]]
@@ -25,9 +25,9 @@ class InsertQueryBuilder(QueryBuilderBase):
         self._unless_conflict_else = None
         self._fields = []
 
-    def field(
+    def add_field(
         self,
-        field,
+        field: t.Union[EdgeGraphField[T, V], str],
         value: t.Optional[V] = None,
         value_type: t.Optional[PrimitiveTypes] = None,
         expression: t.Optional[Expression] = None,
@@ -53,7 +53,7 @@ class InsertQueryBuilder(QueryBuilderBase):
             try:
                 field_info: EdgeGraphField = getattr(self.base_cls, "field_name")
                 field_type = field_info.type
-                upper_type_name = field_info.class_name
+                upper_type_name = field_info.base.__name__
             except AttributeError:
                 raise ConditionValidationError(
                     field_name, f"Field does not exist in {self.base_cls}."
@@ -61,7 +61,7 @@ class InsertQueryBuilder(QueryBuilderBase):
         elif isinstance(field, EdgeGraphField):
             field_name = field.name
             field_type = field.type
-            upper_type_name = field.class_name
+            upper_type_name = field.base.__name__
 
             try:
                 getattr(self.base_cls, field_name)

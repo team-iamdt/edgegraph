@@ -163,7 +163,7 @@ typing-extensions = ">=4.0.1,<5.0.0"
 
 [[package]]
 name = "coverage"
-version = "6.4.3"
+version = "6.4.4"
 description = "Code coverage measurement for Python"
 category = "dev"
 optional = false
@@ -681,7 +681,7 @@ tomli = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.9,<4.0"
-content-hash = "c94a4d1d5e7a8f5de3fdbb4c419f8a6bc7b028fe0d999153439625a07610fc87"
+content-hash = "363071ee5179319716d690db8dd53a74887ceda9311e88f1aec179c916d7c607"
 
 [metadata.files]
 argcomplete = []

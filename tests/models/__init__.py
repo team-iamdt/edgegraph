@@ -8,9 +8,9 @@ from edgegraph.schema import EdgeModel
 
 
 class UserModel(EdgeModel):
-    id: uuid.UUID = Field(default=uuid.uuid1())
-    updated_at: pendulum.DateTime = Field(default=pendulum.now())
-    created_at: pendulum.DateTime = Field(None)
+    id: uuid.UUID = Field(default_factory=uuid.uuid1)
+    updated_at: pendulum.DateTime = Field(default_factory=pendulum.now)
+    created_at: pendulum.DateTime = Field(default_factory=pendulum.now)
     deleted_at: t.Optional[pendulum.DateTime] = Field(default=None)
     deleted: bool = Field(default=False)
 
@@ -24,9 +24,9 @@ class UserModel(EdgeModel):
 
 
 class MemoModel(EdgeModel):
-    id: uuid.UUID = Field(default=uuid.uuid1())
-    updated_at: pendulum.DateTime = Field(default=pendulum.now())
-    created_at: pendulum.DateTime = Field(None)
+    id: uuid.UUID = Field(default_factory=uuid.uuid1)
+    updated_at: pendulum.DateTime = Field(default_factory=pendulum.now)
+    created_at: pendulum.DateTime = Field(default_factory=pendulum.now)
     deleted_at: t.Optional[pendulum.DateTime] = Field(default=None)
     deleted: bool = Field(default=False)
 
@@ -43,9 +43,9 @@ class MemoModel(EdgeModel):
 
 
 class CommentModel(EdgeModel):
-    id: uuid.UUID = Field(default=uuid.uuid1())
-    updated_at: pendulum.DateTime = Field(default=pendulum.now())
-    created_at: pendulum.DateTime = Field(None)
+    id: uuid.UUID = Field(default_factory=uuid.uuid1)
+    updated_at: pendulum.DateTime = Field(default_factory=pendulum.now)
+    created_at: pendulum.DateTime = Field(default_factory=pendulum.now)
     deleted_at: t.Optional[pendulum.DateTime] = Field(default=None)
     deleted: bool = Field(default=False)
 

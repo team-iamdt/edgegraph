@@ -9,6 +9,7 @@ import pytest
 import tests.models as m
 from edgegraph.errors import ConditionValidationError
 from edgegraph.expressions.side import SideExpression
+from edgegraph.reflections import field
 from edgegraph.types import PrimitiveTypes
 
 
@@ -34,9 +35,17 @@ def test_valid_insert_query_with_edgeql():
     date = pendulum.now()
     memo_insert = (
         MemoModel.insert()
-        .field(MemoModel.content, value="Some Memo", value_type=PrimitiveTypes.STRING)
-        .field(MemoModel.created_at, date, value_type=PrimitiveTypes.DATETIME)
-        .field(MemoModel.updated_at, date, value_type=PrimitiveTypes.DATETIME)
+        .add_field(
+            field(MemoModel.content),
+            value="Some Memo",
+            value_type=PrimitiveTypes.STRING,
+        )
+        .add_field(
+            field(MemoModel.created_at), date, value_type=PrimitiveTypes.DATETIME
+        )
+        .add_field(
+            field(MemoModel.updated_at), date, value_type=PrimitiveTypes.DATETIME
+        )
         .build()
     )
 
@@ -50,12 +59,12 @@ def test_valid_insert_query_with_edgeql():
     assert (
         dedent(
             """
-        insert default::Memo {
-        content: <str>$content,
-        created_at: <datetime>$created_at,
-        updated_at: <datetime>$updated_at,
-        }
-    """
+                insert default::Memo {
+                content: <str>$content,
+                created_at: <datetime>$created_at,
+                updated_at: <datetime>$updated_at,
+                }
+            """
         )[1:]
         == dedent(memo_insert.query)
     )
@@ -65,10 +74,12 @@ def test_valid_insert_query_with_subquery_with_edgeql():
     UserModel = m.UserModel
     MemoModel = m.MemoModel
 
-    user_subquery = UserModel.select([UserModel.id, UserModel.name]).filter(
+    user_subquery = UserModel.select(
+        [field(UserModel.id), field(UserModel.name)]
+    ).filter(
         SideExpression(
             equation="=",
-            origin=UserModel.id,
+            origin=field(UserModel.id),
             target=uuid.UUID("7acf23a6-1c86-11ed-9e22-729bc6601436"),
             target_type=PrimitiveTypes.UUID,
         )
@@ -77,10 +88,18 @@ def test_valid_insert_query_with_subquery_with_edgeql():
     date = pendulum.now()
     memo_insert = (
         MemoModel.insert()
-        .field(MemoModel.content, value="Some Memo", value_type=PrimitiveTypes.STRING)
-        .field(MemoModel.created_by, subquery=user_subquery)
-        .field(MemoModel.created_at, date, value_type=PrimitiveTypes.DATETIME)
-        .field(MemoModel.updated_at, date, value_type=PrimitiveTypes.DATETIME)
+        .add_field(
+            field(MemoModel.content),
+            value="Some Memo",
+            value_type=PrimitiveTypes.STRING,
+        )
+        .add_field(field(MemoModel.created_by), subquery=user_subquery)
+        .add_field(
+            field(MemoModel.created_at), date, value_type=PrimitiveTypes.DATETIME
+        )
+        .add_field(
+            field(MemoModel.updated_at), date, value_type=PrimitiveTypes.DATETIME
+        )
         .build()
     )
 
@@ -100,7 +119,7 @@ def test_invalid_insert_query_parameter():
     user_subquery = UserModel.select().filter(
         SideExpression(
             equation="=",
-            origin=UserModel.id,
+            origin=field(UserModel.id),
             target=uuid.UUID("7acf23a6-1c86-11ed-9e22-729bc6601436"),
             target_type=PrimitiveTypes.UUID,
         )
@@ -109,11 +128,13 @@ def test_invalid_insert_query_parameter():
     with pytest.raises(ConditionValidationError):
         (
             MemoModel.insert()
-            .field(
-                MemoModel.content, value="Some Memo", value_type=PrimitiveTypes.STRING
+            .add_field(
+                field(MemoModel.content),
+                value="Some Memo",
+                value_type=PrimitiveTypes.STRING,
             )
-            .field(MemoModel.created_by, subquery=user_subquery)
-            .field(MemoModel.created_at, pendulum.now())
-            .field(MemoModel.updated_at, pendulum.now())
+            .add_field(field(MemoModel.created_by), subquery=user_subquery)
+            .add_field(field(MemoModel.created_at), pendulum.now())
+            .add_field(field(MemoModel.updated_at), pendulum.now())
             .build()
         )

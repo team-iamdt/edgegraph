@@ -15,8 +15,6 @@ from edgegraph.query_builder.base import (
 from edgegraph.reflections import EdgeGraphField
 
 
-# I removed some type signatures, cause of compatibility with defined schema's instance attribute type.
-# We can improve this after got api's stability.
 class SelectQueryBuilder(QueryBuilderBase[T]):
     query_type = "SELECT"
     _limit: t.Optional[int]
@@ -45,7 +43,7 @@ class SelectQueryBuilder(QueryBuilderBase[T]):
 
     def order(
         self,
-        field: EdgeGraphField,
+        field: EdgeGraphField[T, t.Any],
         order: OrderEnum,
         empty: t.Optional[EmptyStrategyEnum] = None,
     ):
@@ -65,11 +63,14 @@ class SelectQueryBuilder(QueryBuilderBase[T]):
         self._empty_strategy = empty
         return self
 
-    def field(self, field):
+    def add_field(
+        self,
+        field: t.Union[EdgeGraphField, SelectQueryField],
+    ):
         # First Create SelectField if field is EdgeGraphField
         if isinstance(field, EdgeGraphField):
             selection_field = SelectQueryField(
-                name=field.name, type=field.type, upper_type_name=field.class_name
+                name=field.name, type=field.type, upper_type_name=field.base.__name__
             )
         elif isinstance(field, BaseQueryField):
             selection_field = field

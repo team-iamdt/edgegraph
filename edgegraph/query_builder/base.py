@@ -25,8 +25,6 @@ class EmptyStrategyEnum(Enum):
 
 # Base Query Builder Class. You can extend this class to create custom query builders.
 class QueryBuilderBase(t.Generic[T], metaclass=abc.ABCMeta):
-    base_cls: t.Type[T]
-
     def __init__(self, cls: t.Type[T]):
         self.base_cls = cls
 
@@ -54,7 +52,7 @@ class BaseQueryField(t.Generic[T]):
 
 
 @dataclass(frozen=True)
-class SelectQueryField(BaseQueryField):
+class SelectQueryField(BaseQueryField[T]):
     pass
 
 
@@ -65,7 +63,7 @@ class InsertQueryField(BaseQueryField[T]):
 
 
 def reference(
-    field,
+    field: t.Union[EdgeGraphField, str],
     expression: t.Optional[Expression] = None,
     subquery: t.Optional[QueryBuilderBase] = None,
 ) -> BaseQueryField:
@@ -82,7 +80,7 @@ def reference(
     if isinstance(field, EdgeGraphField):
         name = field.name
         typ = field.type
-        upper_type_name = field.class_name
+        upper_type_name = field.base.__name__
     elif type(field) is str:
         name = field
         typ = None

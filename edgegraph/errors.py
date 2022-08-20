@@ -66,3 +66,17 @@ class ExpressionError(Exception):
 
     def __str__(self):
         return f"Expression Error in {self.context} context: {self.message}"
+
+
+class FieldNotFoundError(Exception):
+    field: str
+
+    def __init__(self, field: str):
+        self.field = field
+
+    def __str__(self):
+        return f"Failed to found field: {self.field}"
+
+
+class CandidateTypeError(TypeError):
+    pass
