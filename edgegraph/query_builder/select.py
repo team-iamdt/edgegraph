@@ -4,8 +4,8 @@ from edgegraph.errors import ConditionValidationError, QueryContextMissmatchErro
 from edgegraph.expressions.base import Expression
 from edgegraph.query_builder.base import (
     BaseQueryField,
-    EmptyStrategyEnum,
-    OrderEnum,
+    EmptyStrategyType,
+    OrderType,
     QueryBuilderBase,
     QueryFieldType,
     SelectQueryField,
@@ -19,8 +19,8 @@ class SelectQueryBuilder(QueryBuilderBase[T]):
     type = "SELECT"
     _limit: t.Optional[int]
     _offset: t.Optional[int]
-    _order_by: t.Optional[t.Tuple[str, OrderEnum]]
-    _empty_strategy: t.Optional[EmptyStrategyEnum]
+    _order_by: t.Optional[t.Tuple[str, OrderType]]
+    _empty_strategy: t.Optional[EmptyStrategyType]
     _fields: t.List[SelectQueryField]
     _filters: t.List[Expression]
 
@@ -44,8 +44,8 @@ class SelectQueryBuilder(QueryBuilderBase[T]):
     def order(
         self,
         field: EdgeGraphField[T, t.Any],
-        order: OrderEnum,
-        empty: t.Optional[EmptyStrategyEnum] = None,
+        order: OrderType,
+        empty: t.Optional[EmptyStrategyType] = None,
     ):
         field_name = field.name
 
@@ -136,7 +136,7 @@ class SelectQueryBuilder(QueryBuilderBase[T]):
         self._fields.append(selection_field)
         return self
 
-    def filter(self, expr: Expression):
+    def add_filter(self, expr: Expression):
         if expr in self._filters:
             raise ConditionValidationError(str(expr), "Filter already exists.")
         self._filters.append(expr)

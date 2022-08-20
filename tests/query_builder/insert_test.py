@@ -56,9 +56,9 @@ def test_valid_insert_query_with_edgeql():
         dedent(
             """
                 insert default::Memo {
-                content: <str>$content,
-                created_at: <datetime>$created_at,
-                updated_at: <datetime>$updated_at,
+                content := <str>$content,
+                created_at := <datetime>$created_at,
+                updated_at := <datetime>$updated_at,
                 }
             """
         )[1:]
@@ -72,7 +72,7 @@ def test_valid_insert_query_with_subquery_with_edgeql():
 
     user_subquery = UserModel.select(
         [field(UserModel.id), field(UserModel.name)]
-    ).filter(
+    ).add_filter(
         SideExpression(
             equation="=",
             origin=field(UserModel.id),
@@ -108,7 +108,7 @@ def test_invalid_insert_query_parameter():
     UserModel = m.UserModel
     MemoModel = m.MemoModel
 
-    user_subquery = UserModel.select().filter(
+    user_subquery = UserModel.select().add_filter(
         SideExpression(
             equation="=",
             origin=field(UserModel.id),

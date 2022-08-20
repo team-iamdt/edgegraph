@@ -6,7 +6,7 @@ import pytest
 
 import tests.models as m
 from edgegraph.errors import QueryContextMissmatchError
-from edgegraph.query_builder.base import EmptyStrategyEnum, OrderEnum, reference
+from edgegraph.query_builder.base import EmptyStrategyType, OrderType, reference
 from edgegraph.reflections import field
 
 
@@ -44,7 +44,7 @@ def test_valid_select_query_with_edgeql():
         )
         .limit(10)
         .offset(0)
-        .order(MemoModel.created_at, OrderEnum.DESC, EmptyStrategyEnum.LAST)
+        .order(MemoModel.created_at, OrderType.DESC, EmptyStrategyType.LAST)
         .build()
     )
 
@@ -94,6 +94,6 @@ def test_invalid_fields_in_select_query():
             )
             .limit(10)
             .offset(0)
-            .order(MemoModel.created_at, OrderEnum.DESC, EmptyStrategyEnum.LAST)
+            .order(MemoModel.created_at, OrderType.DESC, EmptyStrategyType.LAST)
             .build()
         )
