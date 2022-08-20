@@ -106,7 +106,7 @@ def test_valid_insert_query_with_subquery_with_edgeql():
     # check subquery value contains
     result = False
     for key in memo_insert.kwargs.keys():
-        if key.startswith("equation_"):
+        if key.startswith("created_by__filter_") and "__equation_" in key:
             result = True
 
     assert result

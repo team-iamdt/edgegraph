@@ -3,12 +3,10 @@ import typing as t
 from dataclasses import dataclass
 from enum import Enum
 
-from edgedb.abstract import QueryWithArgs
-
 from edgegraph.errors import ConditionValidationError
 from edgegraph.expressions.base import Expression
 from edgegraph.reflections import Configurable, EdgeGraphField
-from edgegraph.types import PrimitiveTypes
+from edgegraph.types import PrimitiveTypes, QueryResult
 
 T = t.TypeVar("T", bound=Configurable)
 
@@ -34,11 +32,7 @@ class QueryBuilderBase(t.Generic[T], metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def build(self, prefix: str = "") -> QueryWithArgs:
-        pass
-
-    @abc.abstractmethod
-    def build_string(self, prefix: str = "") -> str:
+    def build(self, prefix: str = "") -> QueryResult:
         pass
 
 

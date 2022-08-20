@@ -1,4 +1,10 @@
+import typing as t
 from enum import Enum
+
+
+class QueryResult(t.NamedTuple):
+    query: str
+    kwargs: t.Dict[str, t.Any]
 
 
 class PrimitiveTypes(Enum):

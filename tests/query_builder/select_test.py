@@ -7,6 +7,7 @@ import pytest
 import tests.models as m
 from edgegraph.errors import QueryContextMissmatchError
 from edgegraph.query_builder.base import EmptyStrategyEnum, OrderEnum, reference
+from edgegraph.reflections import field
 
 
 @pytest.fixture(scope="module")
@@ -29,16 +30,16 @@ def test_valid_select_query_with_edgeql():
     UserModel = m.UserModel
     MemoModel = m.MemoModel
 
-    user_subquery = UserModel.select([UserModel.id, UserModel.name])
+    user_subquery = UserModel.select([field(UserModel.id), field(UserModel.name)])
 
     memo_select = (
         MemoModel.select(
             [
-                MemoModel.id,
-                MemoModel.content,
-                MemoModel.created_at,
-                reference(MemoModel.created_by, subquery=user_subquery),
-                reference(MemoModel.accessable_users, subquery=user_subquery),
+                field(MemoModel.id),
+                field(MemoModel.content),
+                field(MemoModel.created_at),
+                reference(field(MemoModel.created_by), subquery=user_subquery),
+                reference(field(MemoModel.accessable_users), subquery=user_subquery),
             ]
         )
         .limit(10)
@@ -74,17 +75,21 @@ def test_invalid_fields_in_select_query():
     UserModel = m.UserModel
     MemoModel = m.MemoModel
 
-    user_subquery = UserModel.select().add_field(UserModel.id).add_field(UserModel.name)
+    user_subquery = (
+        UserModel.select().add_field(field(UserModel.id)).add_field(UserModel.name)
+    )
 
     with pytest.raises(QueryContextMissmatchError):
         (
             MemoModel.select(
                 [
-                    MemoModel.id,
-                    MemoModel.content,
-                    UserModel.created_at,
-                    reference(MemoModel.created_by, subquery=user_subquery),
-                    reference(MemoModel.accessable_users, subquery=user_subquery),
+                    field(MemoModel.id),
+                    field(MemoModel.content),
+                    field(UserModel.created_at),
+                    reference(field(MemoModel.created_by), subquery=user_subquery),
+                    reference(
+                        field(MemoModel.accessable_users), subquery=user_subquery
+                    ),
                 ]
             )
             .limit(10)

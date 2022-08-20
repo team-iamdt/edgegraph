@@ -1,13 +1,12 @@
 import typing as t
 
-from edgedb.abstract import QueryWithArgs
 from pydantic import BaseModel
 
 from edgegraph.errors import ConditionValidationError, QueryContextMissmatchError
 from edgegraph.expressions.base import Expression
 from edgegraph.query_builder.base import InsertQueryField, QueryBuilderBase, T
 from edgegraph.reflections import EdgeGraphField
-from edgegraph.types import PrimitiveTypes
+from edgegraph.types import PrimitiveTypes, QueryResult
 
 V = t.TypeVar("V")
 
@@ -131,7 +130,7 @@ class InsertQueryBuilder(QueryBuilderBase[T]):
 
         return self
 
-    def build(self, prefix: str = "") -> QueryWithArgs:
+    def build(self, prefix: str = "") -> QueryResult:
         # TODO(Hazealign): Check required fields are all settled.
         (module, model_name) = self.base_cls.get_schema_config()
         result_args: t.Dict[str, t.Any] = dict()
@@ -145,9 +144,9 @@ class InsertQueryBuilder(QueryBuilderBase[T]):
             )
 
             if field.expression is not None:
-                expr_query, expr_dict = field.expression.to_query(context_prefix)
-                result_args.update(expr_dict)
-                query += f"{field.name}: {expr_query},\n"
+                expression = field.expression.build(context_prefix)
+                result_args.update(expression.kwargs)
+                query += f"{field.name}: {expression.query},\n"
 
             elif field.subquery is not None:
                 subquery = field.subquery.build(context_prefix)
@@ -155,6 +154,7 @@ class InsertQueryBuilder(QueryBuilderBase[T]):
                 query += f"{field.name}: (\n{subquery.query}),\n"
 
             else:
+                # already we checked field.value_type before .add_field, but this expression is for type safety.
                 assert field.value_type is not None
                 key = f"{prefix}__{field.name}" if prefix != "" else field.name
                 result_args[key] = field.value
@@ -170,20 +170,14 @@ class InsertQueryBuilder(QueryBuilderBase[T]):
             query += f"unless conflict on ({unless_conflicts})\n"
 
             if self._unless_conflict_else is not None:
-                conflict_else_subquery = self._unless_conflict_else.build_string()
-                query += f"else (\n{conflict_else_subquery})"
+                unless_conflict_prefix = (
+                    f"{prefix}__unless_conflict"
+                    if len(prefix) > 0
+                    else "unless_conflict"
+                )
+                conflict_else = self._unless_conflict_else.build(unless_conflict_prefix)
+                result_args.update(conflict_else.kwargs)
 
-        return QueryWithArgs(
-            query=query,
-            args=(),
-            kwargs=result_args,
-        )
+                query += f"else (\n{conflict_else.query})"
 
-    def build_string(self, prefix: str = "") -> str:
-        query_result = self.build(prefix)
-        query = query_result.query
-
-        for key, value in query_result.kwargs.items():
-            query = query.replace(f"${key}", f"'{str(value)}'")
-
-        return query
+        return QueryResult(query=query, kwargs=result_args)

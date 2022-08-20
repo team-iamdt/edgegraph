@@ -3,7 +3,7 @@ import typing as t
 from edgegraph.errors import ExpressionError
 from edgegraph.expressions.base import Expression
 from edgegraph.reflections import EdgeGraphField
-from edgegraph.types import PrimitiveTypes
+from edgegraph.types import PrimitiveTypes, QueryResult
 
 V = t.TypeVar("V")
 
@@ -30,7 +30,7 @@ class SideExpression(Expression, t.Generic[V]):
         self._origin_type = origin_type
         self._target_type = target_type
 
-    def to_query(self, prefix: str = "") -> t.Tuple[str, t.Dict[str, t.Any]]:
+    def build(self, prefix: str = "") -> QueryResult:
         result_dict: t.Dict[str, t.Any] = dict()
 
         if not (
@@ -49,7 +49,7 @@ class SideExpression(Expression, t.Generic[V]):
         elif isinstance(self._origin, EdgeGraphField):
             origin_query = f".{self._origin.name}"
         else:
-            (origin_query, update_dict) = self._origin.to_query()
+            (origin_query, update_dict) = self._origin.build()
             result_dict.update(update_dict)
             origin_query = f"({origin_query})"
 
@@ -64,9 +64,9 @@ class SideExpression(Expression, t.Generic[V]):
             target_query = f"<{self._target_type.value}>${target_key}"
             result_dict[target_key] = self._target
         else:
-            (target_query, update_dict) = self._target.to_query()
+            (target_query, update_dict) = self._target.build()
             result_dict.update(update_dict)
             target_query = f"({target_query})"
 
         result_query = f"{origin_query} {self._equation} {target_query}"
-        return result_query, result_dict
+        return QueryResult(result_query, result_dict)
