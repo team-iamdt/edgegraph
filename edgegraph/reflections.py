@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from pydantic import BaseModel
 from pydantic.typing import resolve_annotations
 
+from edgegraph.errors import CandidateTypeError
+
 ModelMetaclass: t.Type = type(BaseModel)
 Base = t.TypeVar("Base")
 T = t.TypeVar("T")
@@ -69,4 +71,4 @@ class EdgeMetaclass(ModelMetaclass):  # type: ignore
 def field(candidate: t.Any) -> EdgeGraphField:
     if isinstance(candidate, EdgeGraphField):
         return t.cast(EdgeGraphField, candidate)
-    raise TypeError("Candidate's type must be EdgeGraphField")
+    raise CandidateTypeError("Candidate's type must be EdgeGraphField")
