@@ -6,9 +6,14 @@ from enum import Enum
 from edgegraph.errors import ConditionValidationError
 from edgegraph.expressions.base import Expression
 from edgegraph.reflections import Configurable, EdgeGraphField
-from edgegraph.types import PrimitiveTypes, QueryResult
+from edgegraph.types import PrimitiveTypes
 
 T = t.TypeVar("T", bound=Configurable)
+
+
+class QueryBuilderBase(Expression, t.Generic[T], metaclass=abc.ABCMeta):
+    def __init__(self, base_type: t.Type[T]):
+        self.base_type = base_type
 
 
 class OrderEnum(Enum):
@@ -21,28 +26,22 @@ class EmptyStrategyEnum(Enum):
     LAST = "LAST"
 
 
-# Base Query Builder Class. You can extend this class to create custom query builders.
-class QueryBuilderBase(t.Generic[T], metaclass=abc.ABCMeta):
-    def __init__(self, cls: t.Type[T]):
-        self.base_cls = cls
-
-    @property
-    @abc.abstractmethod
-    def query_type(self) -> str:
-        pass
-
-    @abc.abstractmethod
-    def build(self, prefix: str = "") -> QueryResult:
-        pass
+class QueryFieldType(Enum):
+    EXPRESSION = "EXPRESSION"
+    SUBQUERY = "SUBQUERY"
+    VALUE = "VALUE"
+    NONE = "NONE"
 
 
 @dataclass(frozen=True)
 class BaseQueryField(t.Generic[T]):
     name: str
-    type: t.Optional[t.Type[T]] = None
+    query_field_type: QueryFieldType
+
+    value_type: t.Optional[t.Type[T]] = None
     upper_type_name: t.Optional[str] = None
+
     expression: t.Optional[Expression] = None
-    subquery: t.Optional[QueryBuilderBase] = None
 
 
 @dataclass(frozen=True)
@@ -52,18 +51,24 @@ class SelectQueryField(BaseQueryField[T]):
 
 @dataclass(frozen=True)
 class InsertQueryField(BaseQueryField[T]):
-    value_type: t.Optional[PrimitiveTypes] = None  # type represented on edgedb
+    edgedb_type: t.Optional[PrimitiveTypes] = None  # type represented on edgedb
     value: t.Optional[T] = None
 
 
 def reference(
     field: t.Union[EdgeGraphField, str],
     expression: t.Optional[Expression] = None,
-    subquery: t.Optional[QueryBuilderBase] = None,
+    subquery: t.Optional[Expression] = None,
 ) -> BaseQueryField:
     if expression is None and subquery is None:
         raise ConditionValidationError(
             f"referencing {field}", "Subquery or Expression is Required"
+        )
+
+    if expression is not None and subquery is not None:
+        raise ConditionValidationError(
+            f"referencing {field}",
+            "Subquery and Expression can not referenced with same field",
         )
 
     if subquery is not None and type(field) is str:
@@ -73,19 +78,26 @@ def reference(
 
     if isinstance(field, EdgeGraphField):
         name = field.name
-        typ = field.type
+        value_type = field.type
         upper_type_name = field.base.__name__
     elif type(field) is str:
         name = field
-        typ = None
+        value_type = None
         upper_type_name = None
     else:
         raise TypeError("Referenced Field can be EdgeGraphField or str")
 
+    if subquery is not None:
+        field_type = QueryFieldType.SUBQUERY
+        target_expression: t.Optional[Expression] = subquery
+    else:
+        field_type = QueryFieldType.EXPRESSION
+        target_expression = expression
+
     return BaseQueryField(
         name=name,
-        type=typ,
-        expression=expression,
-        subquery=subquery,
+        value_type=value_type,
+        query_field_type=field_type,
+        expression=target_expression,
         upper_type_name=upper_type_name,
     )
