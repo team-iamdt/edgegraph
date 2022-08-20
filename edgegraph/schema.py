@@ -2,9 +2,10 @@ import typing as t
 
 from pydantic import BaseModel
 
+from edgegraph.query_builder.base import SelectQueryField
 from edgegraph.query_builder.insert import InsertQueryBuilder
 from edgegraph.query_builder.select import SelectQueryBuilder
-from edgegraph.reflections import Configurable, EdgeMetaclass
+from edgegraph.reflections import Configurable, EdgeGraphField, EdgeMetaclass
 
 
 class EdgeModel(BaseModel, Configurable, metaclass=EdgeMetaclass):
@@ -19,14 +20,15 @@ class EdgeModel(BaseModel, Configurable, metaclass=EdgeMetaclass):
     @classmethod
     def select(
         cls,
-        fields: t.Optional[t.List] = None,
+        # TODO(Hazealign): When Mypy supports typing_extensions.Self, apply here to send generic type parameter.
+        fields: t.Optional[t.List[t.Union[EdgeGraphField, SelectQueryField]]] = None,
     ) -> SelectQueryBuilder:
         builder = SelectQueryBuilder(cls)
         if fields is not None:
             fields.sort(key=lambda x: x.name)
 
             for field in fields:
-                builder = builder.field(field)
+                builder = builder.add_field(field)
 
         return builder
 

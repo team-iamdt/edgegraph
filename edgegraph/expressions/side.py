@@ -19,8 +19,8 @@ class SideExpression(Expression, t.Generic[V]):
     def __init__(
         self,
         equation: str,
-        origin: t.Union[V, EdgeGraphField, Expression],
-        target: t.Union[V, Expression],
+        origin: t.Union[EdgeGraphField, Expression, V],
+        target: t.Union[Expression, V],
         origin_type: t.Optional[PrimitiveTypes] = None,
         target_type: t.Optional[PrimitiveTypes] = None,
     ):

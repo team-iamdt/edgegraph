@@ -74,7 +74,7 @@ def test_invalid_fields_in_select_query():
     UserModel = m.UserModel
     MemoModel = m.MemoModel
 
-    user_subquery = UserModel.select().field(UserModel.id).field(UserModel.name)
+    user_subquery = UserModel.select().add_field(UserModel.id).add_field(UserModel.name)
 
     with pytest.raises(QueryContextMissmatchError):
         (

@@ -2,12 +2,18 @@ import typing as t
 from dataclasses import dataclass
 
 from pydantic import BaseModel
+from pydantic.typing import resolve_annotations
 
 ModelMetaclass: t.Type = type(BaseModel)
-
-
+Base = t.TypeVar("Base")
 T = t.TypeVar("T")
-V = t.TypeVar("V")
+
+
+@dataclass(frozen=True)
+class EdgeGraphField(t.Generic[Base, T]):
+    base: t.Type[Base]
+    name: str
+    type: t.Type[T]
 
 
 class Configurable:
@@ -25,32 +31,42 @@ class Configurable:
         name: str
 
 
-@dataclass(frozen=True)
-class EdgeGraphField(t.Generic[T]):
-    class_name: str
-    name: str
-    type: t.Type[T]
-
-
 class EdgeMetaclass(ModelMetaclass):  # type: ignore
-    def __new__(cls: t.Type["EdgeMetaclass"], cls_name: str, bases, attrs):
+    def __new__(
+        cls: t.Type["EdgeMetaclass"],
+        cls_name: str,
+        bases,
+        namespace,
+        **kwargs,
+    ):
         # noinspection PyTypeChecker
-        result_type = super().__new__(cls, cls_name, bases, attrs)
+        result_type = super().__new__(
+            cls, cls_name, bases, namespace=namespace, **kwargs
+        )
 
-        hints = t.get_type_hints(result_type)
+        hints: t.Dict[str, t.Type[t.Any]] = resolve_annotations(
+            namespace.get("__annotations__", {}),
+            namespace.get("__module__", None),
+        )
 
-        # Remove ClassVar
-        names = []
-        for name, typ in hints.items():
-            if t.get_origin(typ) is t.ClassVar:
-                names.append(name)
-        for name in names:
-            del hints[name]
+        for name, value in hints.items():
+            # set name and value as tuple
+            # noinspection PyTypeChecker
+            field_value = EdgeGraphField(
+                name=name,
+                type=value,
+                base=result_type,
+            )
+
+            # set EdgeGraphField in field namespace
+            setattr(result_type, name, field_value)
 
         result_type.__hints__ = hints
-        for field, value in hints.items():
-            # set name and value as tuple
-            field_value = EdgeGraphField(class_name=cls_name, name=field, type=value)
-            setattr(result_type, field, field_value)
 
         return result_type
+
+
+def field(candidate: t.Any) -> EdgeGraphField:
+    if isinstance(candidate, EdgeGraphField):
+        return t.cast(EdgeGraphField, candidate)
+    raise TypeError("Candidate's type must be EdgeGraphField")
