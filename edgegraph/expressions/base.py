@@ -1,13 +1,13 @@
 import abc
-import typing as t
 
 from edgegraph.types import QueryResult
 
-T = t.TypeVar("T")
 
-
-class Expression(t.Generic[T], metaclass=abc.ABCMeta):
-    base_cls: t.Type[T]
+class Expression(metaclass=abc.ABCMeta):
+    @property
+    @abc.abstractmethod
+    def type(self) -> str:
+        pass
 
     @abc.abstractmethod
     def build(self, prefix: str = "") -> QueryResult:

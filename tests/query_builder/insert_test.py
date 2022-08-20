@@ -38,14 +38,10 @@ def test_valid_insert_query_with_edgeql():
         .add_field(
             field(MemoModel.content),
             value="Some Memo",
-            value_type=PrimitiveTypes.STRING,
+            db_type=PrimitiveTypes.STRING,
         )
-        .add_field(
-            field(MemoModel.created_at), date, value_type=PrimitiveTypes.DATETIME
-        )
-        .add_field(
-            field(MemoModel.updated_at), date, value_type=PrimitiveTypes.DATETIME
-        )
+        .add_field(field(MemoModel.created_at), date, db_type=PrimitiveTypes.DATETIME)
+        .add_field(field(MemoModel.updated_at), date, db_type=PrimitiveTypes.DATETIME)
         .build()
     )
 
@@ -91,15 +87,11 @@ def test_valid_insert_query_with_subquery_with_edgeql():
         .add_field(
             field(MemoModel.content),
             value="Some Memo",
-            value_type=PrimitiveTypes.STRING,
+            db_type=PrimitiveTypes.STRING,
         )
         .add_field(field(MemoModel.created_by), subquery=user_subquery)
-        .add_field(
-            field(MemoModel.created_at), date, value_type=PrimitiveTypes.DATETIME
-        )
-        .add_field(
-            field(MemoModel.updated_at), date, value_type=PrimitiveTypes.DATETIME
-        )
+        .add_field(field(MemoModel.created_at), date, db_type=PrimitiveTypes.DATETIME)
+        .add_field(field(MemoModel.updated_at), date, db_type=PrimitiveTypes.DATETIME)
         .build()
     )
 
@@ -131,7 +123,7 @@ def test_invalid_insert_query_parameter():
             .add_field(
                 field(MemoModel.content),
                 value="Some Memo",
-                value_type=PrimitiveTypes.STRING,
+                db_type=PrimitiveTypes.STRING,
             )
             .add_field(field(MemoModel.created_by), subquery=user_subquery)
             .add_field(field(MemoModel.created_at), pendulum.now())

@@ -4,7 +4,12 @@ from pydantic import BaseModel
 
 from edgegraph.errors import ConditionValidationError, QueryContextMissmatchError
 from edgegraph.expressions.base import Expression
-from edgegraph.query_builder.base import InsertQueryField, QueryBuilderBase, T
+from edgegraph.query_builder.base import (
+    InsertQueryField,
+    QueryBuilderBase,
+    QueryFieldType,
+    T,
+)
 from edgegraph.reflections import EdgeGraphField
 from edgegraph.types import PrimitiveTypes, QueryResult
 
@@ -12,10 +17,10 @@ V = t.TypeVar("V")
 
 
 class InsertQueryBuilder(QueryBuilderBase[T]):
-    query_type = "INSERT"
+    type = "INSERT"
 
     _unless_conflict: t.Optional[t.List[str]]
-    _unless_conflict_else: t.Optional[QueryBuilderBase]
+    _unless_conflict_else: t.Optional[QueryBuilderBase[T]]
     _fields: t.List[InsertQueryField]
 
     def __init__(self, cls: t.Type[T]):
@@ -28,9 +33,9 @@ class InsertQueryBuilder(QueryBuilderBase[T]):
         self,
         field: t.Union[EdgeGraphField[T, V], str],
         value: t.Optional[V] = None,
-        value_type: t.Optional[PrimitiveTypes] = None,
+        db_type: t.Optional[PrimitiveTypes] = None,
         expression: t.Optional[Expression] = None,
-        subquery: t.Optional[QueryBuilderBase] = None,
+        subquery: t.Optional[Expression] = None,
     ):
         # check if `value`, `expression`, `subquery` is all none
         if value is None and expression is None and subquery is None:
@@ -39,7 +44,7 @@ class InsertQueryBuilder(QueryBuilderBase[T]):
             )
 
         # check if `value` is available but, value_type is none
-        if value is not None and value_type is None:
+        if value is not None and db_type is None:
             raise ConditionValidationError(
                 str(field),
                 "You must specify `value_type` argument if you specify `value`.",
@@ -50,12 +55,12 @@ class InsertQueryBuilder(QueryBuilderBase[T]):
         if isinstance(field, str):
             field_name = field
             try:
-                field_info: EdgeGraphField = getattr(self.base_cls, "field_name")
+                field_info: EdgeGraphField = getattr(self.base_type, "field_name")
                 field_type = field_info.type
                 upper_type_name = field_info.base.__name__
             except AttributeError:
                 raise ConditionValidationError(
-                    field_name, f"Field does not exist in {self.base_cls}."
+                    field_name, f"Field does not exist in {self.base_type}."
                 )
         elif isinstance(field, EdgeGraphField):
             field_name = field.name
@@ -63,22 +68,22 @@ class InsertQueryBuilder(QueryBuilderBase[T]):
             upper_type_name = field.base.__name__
 
             try:
-                getattr(self.base_cls, field_name)
+                getattr(self.base_type, field_name)
             except AttributeError:
                 raise ConditionValidationError(
-                    field_name, f"Field does not exist in {self.base_cls}."
+                    field_name, f"Field does not exist in {self.base_type}."
                 )
         else:
             raise TypeError("field can be EdgeGraphField or str")
 
         # check field is available in this model
-        if upper_type_name != self.base_cls.__name__:
-            raise QueryContextMissmatchError(upper_type_name, self.base_cls)
+        if upper_type_name != self.base_type.__name__:
+            raise QueryContextMissmatchError(upper_type_name, self.base_type)
 
         # check field already exists.
         if field_name in [field.name for field in self._fields]:
             raise ConditionValidationError(
-                field_name, f"Field already exists in {self.base_cls}."
+                field_name, f"Field already exists in {self.base_type}."
             )
 
         # check field type is correct
@@ -90,14 +95,24 @@ class InsertQueryBuilder(QueryBuilderBase[T]):
                 f"Field type is not correct. Expected {field_type}, got {type(value)}",
             )
 
+        if value is not None:
+            query_field_type = QueryFieldType.VALUE
+            target_expression: t.Optional[Expression] = None
+        elif subquery is not None:
+            query_field_type = QueryFieldType.SUBQUERY
+            target_expression = subquery
+        else:
+            query_field_type = QueryFieldType.EXPRESSION
+            target_expression = expression
+
         self._fields.append(
             InsertQueryField(
                 name=field_name,
-                type=field_type,
+                query_field_type=query_field_type,
+                value_type=field_type,
                 upper_type_name=upper_type_name,
-                expression=expression,
-                subquery=subquery,
-                value_type=value_type,
+                expression=target_expression,
+                edgedb_type=db_type,
                 value=value,
             )
         )
@@ -107,7 +122,7 @@ class InsertQueryBuilder(QueryBuilderBase[T]):
     def unless_conflict(
         self,
         *fields: t.Union[str, EdgeGraphField],
-        else_query: QueryBuilderBase = None,
+        else_query: QueryBuilderBase[T] = None,
     ):
         # TODO(Hazealign): Check deep link fields when we support it.
         new_fields = []
@@ -132,7 +147,7 @@ class InsertQueryBuilder(QueryBuilderBase[T]):
 
     def build(self, prefix: str = "") -> QueryResult:
         # TODO(Hazealign): Check required fields are all settled.
-        (module, model_name) = self.base_cls.get_schema_config()
+        (module, model_name) = self.base_type.get_schema_config()
         result_args: t.Dict[str, t.Any] = dict()
         self._fields.sort(key=lambda x: x.name)
 
@@ -146,19 +161,19 @@ class InsertQueryBuilder(QueryBuilderBase[T]):
             if field.expression is not None:
                 expression = field.expression.build(context_prefix)
                 result_args.update(expression.kwargs)
-                query += f"{field.name}: {expression.query},\n"
 
-            elif field.subquery is not None:
-                subquery = field.subquery.build(context_prefix)
-                result_args.update(subquery.kwargs)
-                query += f"{field.name}: (\n{subquery.query}),\n"
+                if field.query_field_type == QueryFieldType.EXPRESSION:
+                    query += f"{field.name}: {expression.query},\n"
+                else:
+                    # Wrap Subquery
+                    query += f"{field.name}: (\n{expression.query}),\n"
 
             else:
                 # already we checked field.value_type before .add_field, but this expression is for type safety.
-                assert field.value_type is not None
+                assert field.edgedb_type is not None
                 key = f"{prefix}__{field.name}" if prefix != "" else field.name
                 result_args[key] = field.value
-                query += f"{field.name}: <{field.value_type.value}>${key},\n"
+                query += f"{field.name}: <{field.edgedb_type.value}>${key},\n"
 
         query += "}\n"
 
