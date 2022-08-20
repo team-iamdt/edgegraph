@@ -5,14 +5,11 @@ from pydantic import BaseModel
 from edgegraph.query_builder.base import SelectQueryField
 from edgegraph.query_builder.insert import InsertQueryBuilder
 from edgegraph.query_builder.select import SelectQueryBuilder
+from edgegraph.query_builder.update import UpdateQueryBuilder
 from edgegraph.reflections import Configurable, EdgeGraphField, EdgeMetaclass
 
 
 class EdgeModel(BaseModel, Configurable, metaclass=EdgeMetaclass):
-    # @classmethod
-    # def update(cls) -> UpdateQueryBuilder:
-    #     pass
-    #
     # @classmethod
     # def delete(cls) -> DeleteQueryBuilder:
     #     pass
@@ -35,3 +32,7 @@ class EdgeModel(BaseModel, Configurable, metaclass=EdgeMetaclass):
     @classmethod
     def insert(cls) -> InsertQueryBuilder:
         return InsertQueryBuilder(cls)
+
+    @classmethod
+    def update(cls) -> UpdateQueryBuilder:
+        return UpdateQueryBuilder(cls)

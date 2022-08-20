@@ -16,12 +16,12 @@ class QueryBuilderBase(Expression, t.Generic[T], metaclass=abc.ABCMeta):
         self.base_type = base_type
 
 
-class OrderEnum(Enum):
+class OrderType(Enum):
     ASC = "ASC"
     DESC = "DESC"
 
 
-class EmptyStrategyEnum(Enum):
+class EmptyStrategyType(Enum):
     FIRST = "FIRST"
     LAST = "LAST"
 
@@ -31,6 +31,12 @@ class QueryFieldType(Enum):
     SUBQUERY = "SUBQUERY"
     VALUE = "VALUE"
     NONE = "NONE"
+
+
+class AssignType(Enum):
+    ASSIGN = ":="
+    APPEND = "-="
+    REMOVE = "+="
 
 
 @dataclass(frozen=True)
@@ -50,9 +56,12 @@ class SelectQueryField(BaseQueryField[T]):
 
 
 @dataclass(frozen=True)
-class InsertQueryField(BaseQueryField[T]):
+class InsertOrUpdateQueryField(BaseQueryField[T]):
     edgedb_type: t.Optional[PrimitiveTypes] = None  # type represented on edgedb
     value: t.Optional[T] = None
+
+    # default is just 'assign', it can be 'append' or 'remove'
+    assign_type: AssignType = AssignType.ASSIGN
 
 
 def reference(

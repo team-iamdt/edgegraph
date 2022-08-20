@@ -11,28 +11,73 @@ from edgegraph.query_builder.base import (
     QueryFieldType,
     T,
 )
+from edgegraph.query_builder.select import SelectQueryBuilder
 from edgegraph.reflections import EdgeGraphField
 from edgegraph.types import PrimitiveTypes, QueryResult
 
 V = t.TypeVar("V")
 
 
-class InsertQueryBuilder(QueryBuilderBase[T]):
-    type = "INSERT"
-
-    _unless_conflict: t.Optional[t.List[str]]
-    _unless_conflict_else: t.Optional[QueryBuilderBase[T]]
+class UpdateQueryBuilder(QueryBuilderBase[T]):
+    type = "UPDATE"
+    _target_subquery: t.Optional[SelectQueryBuilder]
+    _filters: t.Optional[t.List[Expression]]
     _fields: t.List[InsertOrUpdateQueryField]
 
     def __init__(self, cls: t.Type[T]):
         super().__init__(cls)
-        self._unless_conflict = None
-        self._unless_conflict_else = None
+        self._target_subquery = None
+        self._filters = None
         self._fields = []
+
+    def set_target(
+        self,
+        subquery: SelectQueryBuilder[T],
+    ):
+        # check filters are exists
+        if self._filters is not None:
+            raise ConditionValidationError(
+                self.base_type.__name__,
+                "Update Target Subquery or Update Filters are can't use both.",
+            )
+
+        # Check this subquery is really SelectQueryBuilder
+        if not isinstance(subquery, SelectQueryBuilder):
+            raise ConditionValidationError(
+                self.base_type.__name__, "Subquery is not SelectQueryBuilder"
+            )
+
+        # Check Base Type Signature
+        if self.base_type.__name__ != subquery.base_type.__name__:
+            raise QueryContextMissmatchError(
+                self.base_type,
+                subquery.base_type,
+            )
+
+        self._target_subquery = subquery
+        return self
+
+    def add_filter(self, expr: Expression):
+        # check filters are exists
+        if self._target_subquery is not None:
+            raise ConditionValidationError(
+                self.base_type.__name__,
+                "Update Target Subquery or Update Filters are can't use both.",
+            )
+
+        if self._filters is not None and expr in self._filters:
+            raise ConditionValidationError(str(expr), "Filter already exists.")
+
+        if self._filters is None:
+            self._filters = []
+
+        self._filters.append(expr)
+        return self
 
     def add_field(
         self,
-        field: t.Union[EdgeGraphField[T, V], str],
+        field: EdgeGraphField[T, V],
+        assign: AssignType = AssignType.ASSIGN,
         value: t.Optional[V] = None,
         db_type: t.Optional[PrimitiveTypes] = None,
         expression: t.Optional[Expression] = None,
@@ -41,7 +86,8 @@ class InsertQueryBuilder(QueryBuilderBase[T]):
         # check if `value`, `expression`, `subquery` is all none
         if value is None and expression is None and subquery is None:
             raise ConditionValidationError(
-                str(field), "You must specify one of `value`, `expression`, `subquery`."
+                str(field),
+                "You must specify one of `value`, `expression`, `subquery`.",
             )
 
         # check if `value` is available but, value_type is none
@@ -53,17 +99,7 @@ class InsertQueryBuilder(QueryBuilderBase[T]):
 
         # First get field_name, type, context type name
         # And also check field is available for this model
-        if isinstance(field, str):
-            field_name = field
-            try:
-                field_info: EdgeGraphField = getattr(self.base_type, field_name)
-                field_type = field_info.type
-                upper_type_name = field_info.base.__name__
-            except AttributeError:
-                raise ConditionValidationError(
-                    field_name, f"Field does not exist in {self.base_type}."
-                )
-        elif isinstance(field, EdgeGraphField):
+        if isinstance(field, EdgeGraphField):
             field_name = field.name
             field_type = field.type
             upper_type_name = field.base.__name__
@@ -106,6 +142,10 @@ class InsertQueryBuilder(QueryBuilderBase[T]):
             query_field_type = QueryFieldType.EXPRESSION
             target_expression = expression
 
+        # AssignType.APPEND or AssignType.REMOVE are for Subquery only.
+        if query_field_type != QueryFieldType.SUBQUERY and assign != AssignType.ASSIGN:
+            assign = AssignType.ASSIGN
+
         self._fields.append(
             InsertOrUpdateQueryField(
                 name=field_name,
@@ -115,35 +155,9 @@ class InsertQueryBuilder(QueryBuilderBase[T]):
                 expression=target_expression,
                 edgedb_type=db_type,
                 value=value,
-                assign_type=AssignType.ASSIGN,
+                assign_type=assign,
             )
         )
-
-        return self
-
-    def unless_conflict(
-        self,
-        *fields: t.Union[str, EdgeGraphField],
-        else_query: QueryBuilderBase[T] = None,
-    ):
-        # TODO(Hazealign): Check deep link fields when we support it.
-        new_fields = []
-
-        for field in fields:
-            if isinstance(field, str):
-                new_fields.append(field[1:] if field.startswith(".") else field)
-            elif isinstance(field, EdgeGraphField):
-                new_fields.append(field.name)
-            else:
-                raise TypeError("Fields can be str or EdgeGraphField.")
-
-        if self._unless_conflict is None:
-            self._unless_conflict = new_fields
-        else:
-            self._unless_conflict.extend(new_fields)
-
-        if else_query is not None:
-            self._unless_conflict_else = else_query
 
         return self
 
@@ -152,14 +166,42 @@ class InsertQueryBuilder(QueryBuilderBase[T]):
         result_args: t.Dict[str, t.Any] = dict()
         self._fields.sort(key=lambda x: x.name)
 
-        # build fields with module/model name
-        query = f"insert {module}::{model_name} {{\n"
-        for field in self._fields:
-            context_prefix = (
-                f"{prefix}__{field.name}" if len(prefix) > 0 else field.name
-            )
+        query = "update "
 
+        if self._target_subquery is not None:
+            target_prefix = f"{prefix}__target" if len(prefix) != 0 else "target"
+            target_subquery = self._target_subquery.build(target_prefix)
+            result_args.update(target_subquery.kwargs)
+            query += f"(\n{target_subquery.query})\n"
+        else:
+            query += f"{module}::{model_name}\n"
+
+        if self._filters is not None:
+            query += "filter "
+
+            for idx, filt in enumerate(self._filters):
+                filter_prefix = (
+                    f"filter_{id(filt)}"
+                    if len(prefix) == 0
+                    else f"{prefix}__filter_{id(filt)}"
+                )
+
+                filter_result = filt.build(filter_prefix)
+                result_args.update(filter_result.kwargs)
+                query += f"{filter_result.query}"
+
+                if (idx + 1) != len(self._filters):
+                    query += " AND "
+
+                query += "\n"
+
+        query += "set {\n"
+        for field in self._fields:
             if field.expression is not None:
+                context_prefix = (
+                    f"{prefix}__{field.name}" if len(prefix) > 0 else field.name
+                )
+
                 expression = field.expression.build(context_prefix)
                 result_args.update(expression.kwargs)
 
@@ -180,22 +222,4 @@ class InsertQueryBuilder(QueryBuilderBase[T]):
 
         query += "}\n"
 
-        # build unless conflict
-        if self._unless_conflict is not None:
-            self._unless_conflict.sort()
-
-            unless_conflicts = ", ".join(map(lambda x: f".{x}", self._unless_conflict))
-            query += f"unless conflict on ({unless_conflicts})\n"
-
-            if self._unless_conflict_else is not None:
-                unless_conflict_prefix = (
-                    f"{prefix}__unless_conflict"
-                    if len(prefix) > 0
-                    else "unless_conflict"
-                )
-                conflict_else = self._unless_conflict_else.build(unless_conflict_prefix)
-                result_args.update(conflict_else.kwargs)
-
-                query += f"else (\n{conflict_else.query})\n"
-
-        return QueryResult(query=query, kwargs=result_args)
+        return QueryResult(query, result_args)
