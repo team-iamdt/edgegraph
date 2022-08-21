@@ -123,6 +123,12 @@ class UpdateQueryBuilder(QueryBuilderBase[T]):
                 field_name, f"Field already exists in {self.base_type}."
             )
 
+        # check field_type is typing.Optional[T]
+        if t.get_origin(field_type) is t.Union and type(None) in t.get_args(field_type):
+            field_type = t.get_args(field_type)[0]
+
+        # TODO(Hazealign): if type is just and typing.Union[T] what shall we do?
+
         # check field type is correct
         if value is not None and (
             not isinstance(value, field_type) or isinstance(value, BaseModel)
