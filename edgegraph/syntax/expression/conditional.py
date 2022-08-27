@@ -6,7 +6,7 @@ from edgegraph.syntax.expression.base import BaseExpression
 from edgegraph.types import QueryResult
 
 
-class MultipleCondition(enum.Enum):
+class MultipleConditionType(enum.Enum):
     AND = "and"
     OR = "or"
 
@@ -14,7 +14,7 @@ class MultipleCondition(enum.Enum):
 @dataclass(frozen=True)
 class AndOrExpression(BaseExpression):
     context = "and_or_conditional"
-    condition: MultipleCondition
+    condition: MultipleConditionType
     left_side: BaseExpression
     right_side: BaseExpression
     variables: t.Dict[str, t.Any] = field(default_factory=dict)
@@ -27,7 +27,9 @@ class AndOrExpression(BaseExpression):
         kwargs.update(left_result.kwargs)
         kwargs.update(right_result.kwargs)
 
-        query = f"{left_result.query} {self.condition.value} {right_result.query}"
+        query = (
+            f"{left_result.query} " f"{self.condition.value} " f"{right_result.query}"
+        )
 
         return QueryResult(
             query=query,
@@ -47,7 +49,7 @@ class NotExpression(BaseExpression):
         kwargs = self.variables.copy()
         kwargs.update(side_result.kwargs)
 
-        query = f"(not {side_result.query})"
+        query = f"not {side_result.query}"
 
         return QueryResult(
             query=query,
@@ -57,7 +59,7 @@ class NotExpression(BaseExpression):
 
 def and_expr(left: BaseExpression, right: BaseExpression):
     return AndOrExpression(
-        condition=MultipleCondition.AND,
+        condition=MultipleConditionType.AND,
         left_side=left,
         right_side=right,
     )
@@ -65,7 +67,7 @@ def and_expr(left: BaseExpression, right: BaseExpression):
 
 def or_expr(left: BaseExpression, right: BaseExpression):
     return AndOrExpression(
-        condition=MultipleCondition.OR,
+        condition=MultipleConditionType.OR,
         left_side=left,
         right_side=right,
     )
