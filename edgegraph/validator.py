@@ -86,8 +86,7 @@ class SchemaValidator:
 
         target: t.List[str] = []
         for model in self._models:
-            (module, name) = model.get_schema_config()
-            target.append(f"{module}::{name}")
+            target.append(model.get_type_name())
 
         origin = [x.name for x in result]
         errors = []
@@ -255,8 +254,8 @@ class SchemaValidator:
     ) -> t.List[ValidatedErrorValue]:
         schema = model.schema()
 
-        (module, name) = model.get_schema_config()
-        type_name = f"{module}::{name}"
+        (module, name, _) = model.get_type_config()
+        type_name = model.get_type_name()
 
         # TODO(Hazealign): Migrate to Query Builder when Query Builder implemented
         result: e.Object = await client.query_single(
