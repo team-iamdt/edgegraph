@@ -8,7 +8,10 @@ from edgegraph.types import QueryResult
 
 
 class CompareType(enum.Enum):
-    EQ = "=="
+    EQ = "="
+    NEQ = "!="
+    EEQ = "?="
+    NEEQ = "?!="
     GT = ">"
     GTE = ">="
     LT = "<"
@@ -47,6 +50,30 @@ class CompareExpression(BaseExpression):
 def equals(left: BaseExpression, right: BaseExpression):
     return CompareExpression(
         compare_type=CompareType.EQ,
+        left_side=left,
+        right_side=right,
+    )
+
+
+def not_equals(left: BaseExpression, right: BaseExpression):
+    return CompareExpression(
+        compare_type=CompareType.EQ,
+        left_side=left,
+        right_side=right,
+    )
+
+
+def empty_equals(left: BaseExpression, right: BaseExpression):
+    return CompareExpression(
+        compare_type=CompareType.EEQ,
+        left_side=left,
+        right_side=right,
+    )
+
+
+def not_empty_equals(left: BaseExpression, right: BaseExpression):
+    return CompareExpression(
+        compare_type=CompareType.NEQ,
         left_side=left,
         right_side=right,
     )

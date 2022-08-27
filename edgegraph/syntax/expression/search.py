@@ -5,7 +5,7 @@ from functools import lru_cache
 
 from edgegraph.errors import ExpressionError
 from edgegraph.syntax.expression.base import BaseExpression
-from edgegraph.types import PrimitiveTypes, QueryResult
+from edgegraph.types import QueryResult
 
 
 class InType(enum.Enum):
@@ -26,7 +26,7 @@ class InExpression(BaseException):
     type: InType
     target: BaseExpression
     compare: t.Union[t.Iterable, BaseExpression]
-    edgedb_type: t.Optional[PrimitiveTypes] = None
+    edgedb_type: t.Optional[str] = None
     variables: t.Dict[str, t.Any] = field(default_factory=dict)
 
     @lru_cache
@@ -47,7 +47,7 @@ class InExpression(BaseException):
                 )
 
             variable_name = f"{self.context}_{id(self)}"
-            compare_query = f"<array<{self.edgedb_type.value}>>${variable_name}"
+            compare_query = f"<array<{self.edgedb_type}>>${variable_name}"
             compare_args = {
                 variable_name: self.compare,
             }
@@ -99,7 +99,7 @@ class LikeExpression(BaseExpression):
 def in_expr(
     target: BaseExpression,
     compare: t.Union[t.Iterable, BaseExpression],
-    edgedb_type: t.Optional[PrimitiveTypes] = None,
+    edgedb_type: t.Optional[str] = None,
 ):
     return InExpression(
         type=InType.IN,
@@ -112,7 +112,7 @@ def in_expr(
 def not_in_expr(
     target: BaseExpression,
     compare: t.Union[t.Iterable, BaseExpression],
-    edgedb_type: t.Optional[PrimitiveTypes] = None,
+    edgedb_type: t.Optional[str] = None,
 ):
     return InExpression(
         type=InType.NOT_IN,
