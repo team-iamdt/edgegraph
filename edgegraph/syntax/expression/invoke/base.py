@@ -1,12 +1,13 @@
 import typing as t
 from dataclasses import dataclass, field
 
+from edgegraph.syntax.base import BaseSyntax
 from edgegraph.syntax.expression.base import BaseExpression
 from edgegraph.types import QueryResult
 
 # TODO(Hazealign): How can we represent every Primitive Types in EdgeQL?
 ValuedArgument: t.TypeAlias = t.Tuple[str, t.Any]
-Argument: t.TypeAlias = t.Union[BaseExpression, ValuedArgument]
+Argument: t.TypeAlias = t.Union[BaseSyntax, ValuedArgument]
 
 
 @dataclass(frozen=True)
@@ -25,7 +26,7 @@ class InvokeExpression(BaseExpression):
         query = f"{resolved_function}("
 
         for idx, arg in enumerate(self.arguments):
-            if isinstance(arg, BaseExpression):
+            if isinstance(arg, BaseSyntax):
                 result = arg.to_query()
                 query += result.query
                 kwargs.update(result.kwargs)
