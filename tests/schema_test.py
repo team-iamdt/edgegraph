@@ -4,7 +4,7 @@ import uuid
 import pendulum
 from pydantic import Field
 
-from edgegraph.reflections import EdgeGraphProperty, field
+from edgegraph.reflections import EdgeGraphProperty
 from edgegraph.schema import EdgeModel
 
 
@@ -26,8 +26,6 @@ def test_reflect_fields_are_valid():
 
     # check dot notation
     assert type(UserModel.email) is EdgeGraphProperty
-    assert type(field(UserModel.email)) is EdgeGraphProperty
-    assert field(UserModel.email) == UserModel.email
 
     assert UserModel.__hints__ == {
         "id": uuid.UUID,
