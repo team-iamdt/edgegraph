@@ -1,6 +1,5 @@
 import typing as t
 from dataclasses import dataclass, field
-from functools import lru_cache
 
 from edgegraph.errors import ExpressionError
 from edgegraph.syntax.expression.base import BaseExpression
@@ -15,7 +14,6 @@ class CoalesceExpression(BaseExpression):
     coalesce_type: t.Optional[str] = None
     variables: t.Dict[str, t.Any] = field(default_factory=dict)
 
-    @lru_cache
     def to_query(self) -> QueryResult:
         result = self.side.to_query()
 

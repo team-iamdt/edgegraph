@@ -1,6 +1,5 @@
 import typing as t
 from dataclasses import dataclass, field
-from functools import lru_cache
 
 from edgegraph.errors import CandidateTypeError
 from edgegraph.reflections import EdgeGraphProperty
@@ -14,7 +13,6 @@ class PathExpression(BaseExpression):
     paths: t.Tuple[EdgeGraphProperty, ...]
     variables: t.Dict[str, t.Any] = field(default_factory=dict)
 
-    @lru_cache
     def to_query(self) -> QueryResult:
         return QueryResult(
             query="".join([f".{p.name}" for p in self.paths]),

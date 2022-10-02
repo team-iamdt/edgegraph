@@ -1,7 +1,6 @@
 import enum
 import typing as t
 from dataclasses import dataclass, field
-from functools import lru_cache
 
 from edgegraph.errors import ExpressionError
 from edgegraph.syntax.expression.base import BaseExpression
@@ -29,7 +28,6 @@ class InExpression(BaseException):
     edgedb_type: t.Optional[str] = None
     variables: t.Dict[str, t.Any] = field(default_factory=dict)
 
-    @lru_cache
     def to_query(self) -> QueryResult:
         kwargs = self.variables.copy()
 
@@ -70,7 +68,6 @@ class LikeExpression(BaseExpression):
     compare: t.Union[str, BaseExpression]
     variables: t.Dict[str, t.Any] = field(default_factory=dict)
 
-    @lru_cache
     def to_query(self) -> QueryResult:
         kwargs = self.variables.copy()
         target_result = self.target.to_query()

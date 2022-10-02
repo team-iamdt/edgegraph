@@ -1,6 +1,5 @@
 import typing as t
 from dataclasses import dataclass, field
-from functools import lru_cache
 
 from edgegraph.syntax.expression.base import BaseExpression
 from edgegraph.types import QueryResult
@@ -12,7 +11,6 @@ class ScopeExpression(BaseExpression):
     side: BaseExpression
     variables: t.Dict[str, t.Any] = field(default_factory=dict)
 
-    @lru_cache
     def to_query(self) -> QueryResult:
         side_result = self.side.to_query()
 

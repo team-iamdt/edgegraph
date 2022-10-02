@@ -1,7 +1,6 @@
 import typing as t
 from dataclasses import dataclass, field
 from enum import Enum
-from functools import lru_cache
 
 from edgegraph.errors import ConditionValidationError
 from edgegraph.reflections import EdgeGraphProperty
@@ -62,7 +61,6 @@ class Shape(BaseSyntax, t.Generic[T, V]):
                 ShapePointerType.ASSIGN,  # for custom fields only
             ]
 
-    @lru_cache
     def to_query(self) -> QueryResult:
         query = "{\n"
         kwargs = self.variables.copy()
